@@ -53,7 +53,6 @@ arg_parser.add_argument('-r', '--recursive', action='store_true', default=True,
 arg_parser.add_argument('-v', '--verbosity', type=int, default=2, choices=range(1, 4),
             help='Verbosity level (1-3, default 2)')
 
-args = arg_parser.parse_args()
 
 # for inline - remove for script
 args_text = [   "-f",   "/Users/sergey/Pictures/iPhone Sergey", 
@@ -62,6 +61,9 @@ args_text = [   "-f",   "/Users/sergey/Pictures/iPhone Sergey",
                 "-v", "1"]
 args = arg_parser.parse_args(args_text)
 # for inline - remove for script
+
+args = arg_parser.parse_args()
+
 
 print (args)
 print (args.folder)

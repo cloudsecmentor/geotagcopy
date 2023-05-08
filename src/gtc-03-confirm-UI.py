@@ -4,6 +4,7 @@ from PIL import ImageTk, Image
 import tkinter as tk
 import argparse
 import pandas as pd
+import numpy as np
 
 # create the argument parser
 parser = argparse.ArgumentParser()
@@ -14,16 +15,14 @@ args = parser.parse_args(
     ['-f', 'data/media_metadata_2023-05-03-17-01-46-recs-2023-05-04-23-33-54.csv'])
 
 # parse the command-line arguments
-# args = parser.parse_args()
+args = parser.parse_args()
 
 # read the CSV file into a pandas DataFrame
 df = pd.read_csv(args.filename)
 
-df_files_only = df.filter(like='SourceFile')
-
-df_suggested = df_files_only[df_files_only['suggested.SourceFile'].notna()]
-
-df_suggested
+media_df = df[df['suggested.SourceFile'].notna()].reset_index(drop=True)
+if 'suggested.approved' not in media_df.columns:
+    media_df['suggested.approved'] = np.nan
 
 
 ########################
@@ -31,26 +30,33 @@ df_suggested
 import tkinter as tk
 from PIL import Image, ImageTk
 
-# Create a Tkinter window
+# Create a Tkinter window # Define the geometry of the window
 root = tk.Tk()
-
-# Define the geometry of the window
 root.geometry("1200x600")
 
-# Read the data from the dataframe
-img_paths = df_suggested['SourceFile'].tolist()
 
 # Create a label to display the image
 img_label = tk.Label(root)
-img_label.place(x=150, y=0)
+img_label.place(x=150, y=100)
+img_title_label = tk.Label(root, text="Image without geotag")
+img_title_label.place(x=300, y=50, anchor='center')
 
 # Create a label to display the suggested image
 suggested_img_label = tk.Label(root)
-suggested_img_label.place(x=750, y=0)
+suggested_img_label.place(x=750, y=100)
+suggested_title_label = tk.Label(root, text="Copy geotag from image")
+suggested_title_label.place(x=900, y=50, anchor='center')
+
+from tkintermapview import TkinterMapView
 
 
+map_widget = TkinterMapView(root, corner_radius=0)
+map_widget.place(x=750, y=410, width=300, height=180)
+# pack(fill="both", expand=True)
 
-# Define a function to rescale the image
+
+# Define a function to to detect video
+
 
 # Define a function to rescale the image
 def rescale_image(img, width, height):
@@ -68,68 +74,138 @@ def rescale_image(img, width, height):
     img = img.resize((new_width, new_height))
     return ImageTk.PhotoImage(img)
 
-def rescale_and_update_image():
-    global current_img_path, current_img_tk, current_img
+
+# Define a function to rescale the image
+
+def rescale_and_update_image(img_path, img_label):
+    img = Image.open(img_path)
     # Rescale the image
-    current_img_tk = rescale_image(current_img, img_label.winfo_width(), img_label.winfo_height())
+    img_tk = rescale_image(img, img_label.winfo_width(), img_label.winfo_height())
     # Update the label
-    img_label.config(image=current_img_tk)
+    img_label.config(image=img_tk)
+    img_label.image = img_tk
 
-# Display the first image in the list
-current_img_path = img_paths[0]
-current_img = Image.open(current_img_path)
-current_img_tk = rescale_and_update_image()
-img_label.config(image=current_img_tk)
-root.after(1, rescale_and_update_image)
 
-# Define functions to handle button clicks
+# Define functions to load images
 
-def prev_image():
-    global current_img_path, current_img_tk, img_paths, current_img
+def change_images(direction):
+    global current_index, media_df, map_widget, img_title_label
+    # global current_img_tk, current_img, 
+    # global suggested_img_tk, suggested_img
+
     # Get the index of the previous image
-    index = img_paths.index(current_img_path) - 1
-    # If we're at the beginning of the list, wrap around to the end
-    if index < 0:
-        index = len(img_paths) - 1
-    # Load the previous image
-    current_img_path = img_paths[index]
-    print (current_img_path)
-    current_img = Image.open(current_img_path)
-    # Schedule the rescaling and updating of the image label
-    root.after(1, rescale_and_update_image)
+    if (direction == "next"):
+        current_index = current_index + 1
+        # If we're at the end of the list, wrap around to the beginning
+        if current_index >= len(media_df):
+            current_index = 0
+    elif (direction == "prev"):
+        current_index = current_index - 1
+        # If we're at the beginning of the list, wrap around to the end
+        if current_index < 0:
+            current_index = len(media_df) - 1
+    elif (direction == "start"):
+        current_index = 0
+    else:
+        print(f"Unsupported direction [{direction}]")
+        exit()
 
-def next_image():
-    global current_img_path, current_img_tk, img_paths, current_img
-    # Get the index of the next image
-    index = img_paths.index(current_img_path) + 1
-    # If we're at the end of the list, wrap around to the beginning
-    if index >= len(img_paths):
-        index = 0
-    # Load the next image
-    current_img_path = img_paths[index]
-    print (current_img_path)
-    current_img = Image.open(current_img_path)
+    # Load the previous image
+    current_img_path = media_df.loc[current_index, 'SourceFile']
+    suggested_img_path = media_df.loc[current_index, 'suggested.SourceFile']
+    print (current_img_path, suggested_img_path, current_index)
     # Schedule the rescaling and updating of the image label
-    root.after(1, rescale_and_update_image)
+    delay_after = 1
+    root.after(delay_after, rescale_and_update_image(current_img_path, img_label))
+    root.after(delay_after, rescale_and_update_image(suggested_img_path, suggested_img_label))
+
+
+    # Define the latitude and longitude values
+    img_latitude = media_df.loc[current_index, 'suggested.cust.GPSLatt']
+    img_longitude = media_df.loc[current_index, 'suggested.cust.GPSLong']
+    # google normal tile server
+    map_widget.delete_all_marker()
+    map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
+    map_widget.set_position(img_latitude, img_longitude, marker=True)
+    # set the zoom level
+    map_widget.set_zoom(5)
+
+    # Display approval status
+    approval_status = media_df.loc[current_index, 'suggested.approved']
+    if ( pd.isna(approval_status) ):
+        approval_status = "Not defined"
+    else:
+        if(approval_status):
+            approval_status = "Approved"
+        else:
+            approval_status = "Rejected"
+    img_title_label.configure(text=f"Image without geotag: {approval_status}")
+
+
+
+
+
+
+# # Display the first image in the list
+change_images("start")
+
+def confirm_suggestion(action):
+    print (action)
+    if (action == "approve"):
+        media_df.loc[current_index, 'suggested.approved'] = True
+    elif (action == "reject"):
+        media_df.loc[current_index, 'suggested.approved'] = False
+    else:
+        print(f"Unsupported confirmation [{action}]")
+        exit()
+    change_images("next")
 
 # Create buttons to go to the previous and next images
 button_width=10
 button_height=3
 prev_button = tk.Button(root, 
                         text='<< Previous', 
-                        command=prev_image, 
+                        command=lambda: change_images("prev"), 
                         width=button_width, 
-                        height=button_height)
-# prev_button.pack(side='left')
-prev_button.place(x=0, y=100)
+                        height=button_height).place(x=2, y=100)
+
 next_button = tk.Button(root, 
                         text='Next >>', 
-                        command=next_image, 
+                        command=lambda: change_images("next"), 
                         width=button_width, 
-                        height=button_height)
-# next_button.pack(side='right')
-next_button.place(x=0, y=150)
+                        height=button_height).place(x=2, y=150)
 
+approve_button = tk.Button(root, 
+                        text='Approve >>', 
+                        command=lambda: confirm_suggestion("approve"), 
+                        width=button_width, 
+                        height=button_height).place(x=2, y=200)
+
+reject_button = tk.Button(root, 
+                        text='Reject >>', 
+                        command=lambda: confirm_suggestion("reject"), 
+                        width=button_width, 
+                        height=button_height).place(x=2, y=250)
+
+close_save_button = tk.Button(root, 
+                        text='Close and save', 
+                        command=lambda: close(save=True), 
+                        width=button_width, 
+                        height=button_height).place(x=2, y=300)
+
+
+def close(save):
+    # Save data before closing the window
+        #media_df.to_csv("data.csv")
+    if save:
+        media_df.to_csv(args.filename)
+        print ("Saving on_close")
+    else:
+        print ("Exit without save")
+    root.destroy()
+
+# Bind the on_close function to the WM_DELETE_WINDOW protocol
+root.protocol("WM_DELETE_WINDOW", lambda: close(save=False) )
 
 # Start the Tkinter event loop
 root.mainloop()
