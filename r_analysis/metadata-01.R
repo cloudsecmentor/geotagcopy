@@ -2,7 +2,7 @@ library(tidyverse)
 library(progress)
 
 ####### testing
-mm.file <- "../data/media_metadata.csv"
+mm.file <- "../data/2307/media_metadata_2023-07-15-01-18-01.csv"
 ####### testing
 
 
@@ -82,11 +82,43 @@ fun_author_SourceFile <- function(SourceFile) {
 # testing:
 #   "/Users/s/iPhone X (S)/IMG_5811.JPG" %>% fun_author_SourceFile()
 
+
+check_missing_dates <- function(df) {
+  # Subset of df where both `EXIF:DateTimeOriginal` and `QuickTime:CreateDate` are NA
+  missing_date <- df %>%
+    # Keep only rows where `EXIF:DateTimeOriginal` is NA
+    filter(is.na(`EXIF:DateTimeOriginal`)) %>%
+    # From those rows, keep only ones where `QuickTime:CreateDate` is also NA
+    filter(is.na(`QuickTime:CreateDate`)) 
+  
+  # If there are any rows in missing_date
+  if(nrow(missing_date) > 0) {
+    # Issue a warning that both `EXIF:DateTimeOriginal` and `QuickTime:CreateDate` are NA
+    warning("Warning: EXIF:DateTimeOriginal and QuickTime:CreateDate are NA!")
+    
+    # Select and return columns from missing_date that match "SourceFile" or "date"
+    missing_date %>% select_at(vars(matches("SourceFile|date"))) %>% print()
+  }
+  else{
+    # If no issues, return a message
+    message("No issues found with the dates, continue..")
+  }
+  
+}
+
+media_metadata %>% check_missing_dates()
+
+
+
 ## add author, date and GPS cooords
 mm.auth.date.gps <-
   media_metadata %>%
   mutate (cust.author = map_chr(SourceFile, fun_author_SourceFile))%>%
-  mutate (cust.MediaDate = parse_datetime(`File:FileModifyDate`, "%Y:%m:%d %H:%M:%S %z")) %>%
+  mutate (cust.MediaDate = if_else(
+    is.na(`EXIF:DateTimeOriginal`), 
+    parse_datetime(`QuickTime:CreateDate`, "%Y:%m:%d %H:%M:%S") ,
+    parse_datetime(`EXIF:DateTimeOriginal`, "%Y:%m:%d %H:%M:%S") 
+  ))  %>%
   mutate(cust.GPSAlt = `Composite:GPSAltitude`) %>%
   separate(`Composite:GPSPosition`, into = c("cust.GPSLatt", "cust.GPSLong"), sep = " ")
 
@@ -106,6 +138,7 @@ fun_suggest_gps <- function (SourceFile, cust.MediaDate, cust.author, df, ...) {
     slice_head(n = 1) %>%
     rename( 
       suggested.SourceFile = SourceFile, 
+      suggested.cust.MediaDate = cust.MediaDate, 
       suggested.cust.GPSLatt = cust.GPSLatt,
       suggested.cust.GPSLong = cust.GPSLong,
       suggested.cust.GPSAlt = cust.GPSAlt
@@ -126,7 +159,7 @@ mm.auth.date.gps %>%
 pb <- progress_bar$new(total = nrow(mm.auth.date.gps))
 # recs
 mm.auth.date.gps.recs <-
-  mm.auth.date.gps %>%
+  mm.auth.date.gps %>% 
   mutate (df = list(mm.auth.date.gps)) %>%
   mutate ( sugg = ifelse( is.na(cust.GPSLatt), 
                           pmap(. ,  fun_suggest_gps),
@@ -141,308 +174,14 @@ mm.auth.date.gps.recs %>%
 
 
 out.file.name <-
-mm.file %>%
-  str_replace("\\.csv", 
-              str_c("-recs-",format(Sys.time(), "%Y-%m-%d-%H-%M-%S"), ".csv"))
+mm.file 
+## using the same file name!!!
+# %>%
+#   str_replace("\\.csv", 
+#               str_c("-recs-",format(Sys.time(), "%Y-%m-%d-%H-%M-%S"), ".csv"))
 
 mm.auth.date.gps.recs.out %>%
   write_csv(out.file.name)
 
-# 
-# ################ 
-# ## fix error
-# 
-# 
-# 
-# mm.auth.date.gps  %>%
-#   mutate (df = list(mm.auth.date.gps)) %>%
-#   filter(is.na(cust.GPSLatt)) %>%
-#   mutate ( sugg = pmap(. ,  fun_suggest_gps))
-# 
-# 
-# a <-
-#   mm.auth.date.gps  %>%
-#   select_at((vars(matches("suggested|SourceFile|cust\\.")))) %>%
-#   slice_head(n = 5)
-# 
-# a  %>%
-#   select_at((vars(matches("suggested|SourceFile|cust\\.")))) %>%
-#   slice_head(n = 5) %>%
-#   mutate (df = list(a)) %>%
-#   mutate ( sugg = ifelse( is.na(cust.GPSLatt), 
-#                           pmap(. ,  fun_suggest_gps),
-#                           NA)) %>%
-#   unnest(sugg) %>%
-#   select (-df) %>%
-#   view()
-# 
-# 
-# SourceFile <-  "/Users/sergey/Pictures/iPhone Sergey/DCIM/116APPLE/IMG_6114.JPG"
-# cust.author <- "authS"
-# # cust.MediaDate 
-# 
-# 
-# 
-# 
-# a %>% filter (SourceFile == SourceFile)
-# 
-# 
-#   mutate (df = list(mm.auth.date.gps)) %>%
-#   filter(is.na(cust.GPSLatt)) %>%
-#   mutate ( sugg = pmap(. ,  fun_suggest_gps))
-#   
-# 
-# 
-# mm.auth.date.gps.recs <-
-# mm.auth.date.gps %>%
-#   mutate (df = list(mm.auth.date.gps)) %>%
-#   mutate ( sugg = ifelse( is.na(cust.GPSLatt), 
-#                           pmap(. ,  fun_suggest_gps),
-#                           NA)) %>%
-#   unnest(sugg) %>%
-#   select (-df) 
-# 
-# 
-# mm.auth.date.gps.recs %>%
-#   select_at(vars(matches("suggested|SourceFile|cust\\.")))
-# 
-# mm.file %>%
-#   str_replace("\\.csv", "-recs.csv")
-# 
-# 
-# #########################
-# ##exploration
-# 
-# 
-# 
-# df <-
-# mm.auth.date.gps %>%
-#   select(
-#     mm.auth.date.gps %>%
-#       names() %>%
-#       str_subset("SourceFile|cust")
-#   ) %>%
-#   arrange( cust.MediaDate ) 
-# 
-# 
-# tmp.SourceFile <- "/Users/sergey/Pictures/iPhone X (S)/IMG_4180.JPG"
-# tmp.sc.file <-
-#   df %>%
-#   filter(SourceFile == tmp.SourceFile)
-# 
-# tmp.cust.MediaDate <- tmp.sc.file[["cust.MediaDate"]][[1]]
-# tmp.cust.author <- tmp.sc.file[["cust.author"]][[1]]
-# 
-# 
-# 
-# df %>%
-#   filter ( !is.na(cust.GPSLatt)) %>%
-#   filter (cust.author == tmp.cust.author) %>%
-#   mutate ( time.diff =  abs (cust.MediaDate - tmp.cust.MediaDate)) %>%
-#   arrange ( time.diff ) %>%
-#   slice_head(n = 1) %>%
-#   rename( 
-#     suggested.SourceFile = SourceFile, 
-#     suggested.cust.GPSLatt = cust.GPSLatt,
-#     suggested.cust.GPSLong = cust.GPSLong,
-#     suggested.cust.GPSAlt = cust.GPSAlt
-#     ) %>% view()
-#   select_at(vars(starts_with("suggested")))
-# 
-# 
-# 
-# 
-# fun_suggest_gps <- function (SourceFile, cust.MediaDate, cust.author, df, ...) {
-#   pb$tick()
-#   tmp.cust.author <- cust.author
-#   tmp.cust.MediaDate <- cust.MediaDate
-#   
-#   df %>%
-#     filter ( !is.na(cust.GPSLatt)) %>%
-#     filter (cust.author == tmp.cust.author) %>%
-#     mutate ( time.diff =  abs (difftime(cust.MediaDate, tmp.cust.MediaDate, units = "hours"))) %>%
-#     arrange ( time.diff ) %>%
-#     slice_head(n = 1) %>%
-#     rename( 
-#       suggested.SourceFile = SourceFile, 
-#       suggested.cust.GPSLatt = cust.GPSLatt,
-#       suggested.cust.GPSLong = cust.GPSLong,
-#       suggested.cust.GPSAlt = cust.GPSAlt
-#     ) %>%
-#     select_at(vars(matches("suggested|time.diff")))
-#   
-# }
-# 
-# fun_suggest_gps (
-#                  SourceFile = tmp.SourceFile, 
-#                  cust.MediaDate = tmp.cust.MediaDate, 
-#                  cust.author = tmp.cust.author, 
-#                  df
-#                  )
-# 
-# #a <-
-# 
-# pb <- progress_bar$new(total = 200)
-# 
-# mm.auth.date.gps %>%
-#   filter (is.na(cust.GPSLatt)) %>%
-#   select_at(vars(matches("SourceFile|cust\\."))) %>%
-#   slice_sample (n = 200) %>%
-#   
-#   mutate (df = list(mm.auth.date.gps)) %>%
-#   mutate ( sugg = pmap(. ,  fun_suggest_gps) ) %>%
-#   unnest(sugg) %>%
-#   select (-df) 
-# 
-# 
-# mm.gps <-
-#   media_meta-data %>%
-#   select(
-#     media_metadata %>%
-#       names() %>%
-#       str_subset("SourceFile|GPS")
-#   )
-# 
-# ## not use ICC_Profile:ProfileDateTime
-# ## we will be using File:FileModificationDate
-# 
-# media_metadata %>%
-#   select(
-#     media_metadata %>%
-#       names() %>%
-#       str_subset("SourceFile|File:FileModifyDate")
-#   ) %>%
-#   mutate (MediaDate = parse_datetime(`File:FileModifyDate`, "%Y:%m:%d %H:%M:%S %z")) 
-# 
-# 
-# 
-# mm.gps <-
-#   media_metadata %>%
-#   select(
-#     media_metadata %>%
-#       names() %>%
-#       str_subset("SourceFile|GPS")
-#   )
-# 
-# 
-# media_metadata %>%
-#   names() %>%
-#   str_subset("SourceFile|EXIF:Model")
-# # str_subset("SourceFile|GPSLat|`EXIF:Model`")
-# 
-# 
-# 
-# 
-# fun_filter_param <- function (param, mm.auth,...) {
-#   mm.auth %>%
-#     select(SourceFile, .data[[param]]) %>%
-#     filter(!is.na(.data[[param]])) %>%
-#     mutate(type = param,
-#            value = as.character( .data[[param]])) %>%
-#     slice_head(n = 3)
-# }
-# 
-# 
-# tmp <-
-# mm.auth %>%
-#   names() %>%
-#   str_subset("GPS") %>%
-#   map(fun_filter_param, mm.auth)
-# 
-# # tmp %>% 
-# #   map_dfr(bind_rows) %>%
-# #   count(SourceFile) %>%
-# #   select(-n)
-# # 
-# 
-# media_metadata %>%
-#   select(
-#     media_metadata %>%
-#       names() %>%
-#       str_subset("SourceFile|GPS")
-#   ) %>%
-#   right_join(
-#     tmp %>% 
-#       map_dfr(bind_rows) %>%
-#       count(SourceFile) %>%
-#       select(-n)
-#   )%>%
-#   view()
-# 
-# ##### looks like `Composite:GPSPosition` is available in all files
-# 
-# media_metadata %>%
-#   select(
-#     media_metadata %>%
-#       names() %>%
-#       str_subset("SourceFile|Composite:GPS(P|L|A)")
-#   ) %>%
-#   mutate(GPSAlt = `Composite:GPSAltitude`) %>%
-#   separate(`Composite:GPSPosition`, into = c("GPSLatt", "GPSLong"), sep = " ") %>% view()
-# 
-# 
-# # %>%
-# #  filter(str_detect(SourceFile, "MOV")) %>%
-#   arrange(-`Composite:GPSAltitude`)
-# 
-# Latt Long
-# media_metadata %>%
-#   
-# 
-#   select(SourceFile, type, date) %>%
-#   pivot_wider(names_from = type, values_from = date) 
-#   
-# 
-# media_metadata %>%
-#   filter(is.na(`File:FileModifyDate`))
-# 
+
 # #################################
-# 
-#   unlist() %>%
-#   as_tibble()
-# 
-# 
-# tmp2 <-tibble(SourceFile = NA)
-# 
-# tmp %>%
-#   lag(n = 1)
-# 
-# tmp2 %>%
-#   full_join(tmp[[1]]) %>%
-#   full_join(tmp[[2]])
-# 
-# tmp[[1]]
-# 
-# 
-# param <- "XMP:CreateDate"
-# 
-# fun_filter_date (param, mm.auth)
-# 
-# 
-# vars <- c("mass", "height")
-# cond <- c(80, 150)
-# starwars %>%
-#   filter(
-#     .data[[vars[[1]]]] > cond[[1]],
-#     .data[[vars[[2]]]] > cond[[2]]
-#   )
-# 
-# 
-# mm.auth %>%
-#   filter(!is.na(!!date.param))
-#     
-#     enquo(date.param)))
-# 
-# 
-# #########
-# 
-# media_metadata %>%
-#   select (
-#     media_metadata %>%
-#       names() %>%
-#       str_subset("SourceFile|EXIF:Model")
-#   ) %>%
-#   mutate (author = map_chr(SourceFile, fun_author_SourceFile)) %>%
-#   count(author)
-# 
-# 
