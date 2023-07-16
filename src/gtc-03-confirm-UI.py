@@ -270,15 +270,17 @@ def add_gps_to_image(row):
     import subprocess
     if pd.notnull(row['suggested.approved']) and row['suggested.approved']:
         print(f"Applying GPS data to file: {row['SourceFile']}")
+        comment_text = f"GPS data is copied from the file {row['suggested.SourceFile']}"
+        label_text = "GPSCopy"
         subprocess.run(["exiftool", 
                         "-overwrite_original_in_place",
+                        f"-Label={label_text}",
+                        f"-Comment={comment_text}",
+                        f"-DMComment={comment_text}",
+                        f"-XMP:UserComment={comment_text}",
                         f"-XMP:GPSAltitude=\"{str(row['suggested.cust.GPSAlt'])}\"",
                         f"-XMP:GPSLongitude=\"{str(row['suggested.cust.GPSLong'])}\"",
                         f"-XMP:GPSLatitude=\"{str(row['suggested.cust.GPSLatt'])}\"",
-                        # f"-Composite:GPSPosition='{str(row['suggested.cust.GPSLatt'])} {str(row['suggested.cust.GPSLong'])}'",
-                        # "-GPSLatitude=" + str(row['suggested.cust.GPSLatt']),
-                        # "-GPSLongitude=" + str(row['suggested.cust.GPSLong']),
-                        # "-GPSAltitude=" + str(row['suggested.cust.GPSAlt']),
                        row['SourceFile']],
                        check=True)
 
