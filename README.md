@@ -18,6 +18,11 @@ This tool also accommodates situations with multiple authors. Different people m
 
 ## Usage
 
+See details in
+´´´
+python3 src/gtc-01-export-geo-info.py -h
+´´´
+
 The tool provides a visual interface that lets you compare which exact photos are going to receive new GPS coordinates and from where they'll get them. You can approve and confirm the application of a geotag or reject it. After you've reviewed the proposals and if you're happy with them, you can approve all the suggested GPS positions.
 
 Once you've approved, you can apply the data. For each file that it changes, the system adds a specific label stating that a GPS copy happened for that file, and it adds information about from which file the GPS coordinates were taken. 
