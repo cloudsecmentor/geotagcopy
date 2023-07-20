@@ -39,7 +39,7 @@ arg_parser = ArgumentParser()
 
 # Add a script description
 arg_parser = ArgumentParser(description="""
-This script is used for exporting media metadata into a csv file, 
+This script is used for exporting media GPS metadata into a csv file, 
 then performing a series of operations such as filtering files by dates,
 recursive search in directories, and enabling different levels of verbosity. 
 
@@ -71,6 +71,8 @@ arg_parser.add_argument('-o', '--outFolder', default="./data/",
             help='Folder where csv file will be created with timestamp')
 arg_parser.add_argument('-r', '--recursive', action='store_true', default=False,
             help='(geotag mode) Browse folder recursively (default false)')
+arg_parser.add_argument('-c', '--csv-data-path',
+            help='Path to csv file (if provided, the script will skip reading metadata and jump to filter by date)')
 arg_parser.add_argument('-v', '--verbosity', type=int, default=2, choices=range(1, 4),
             help='Verbosity level (1-3, default 2)')
 
@@ -87,7 +89,6 @@ args = arg_parser.parse_args()
 
 
 print (args)
-print (args.folder)
 
 
 verbosity_logger = {1: logging.ERROR, 2: logging.INFO, 3: logging.DEBUG}
@@ -100,30 +101,44 @@ logger.addHandler(sh)
 logger.setLevel(log_level)
 
 
-media_files = []
-for curr_folder in args.folder:
-    media_files += list_files_in_folder(folder = curr_folder, recursive=args.recursive)
-    logger.info(f"Adding folder: [{curr_folder}]")
+if args.csv_data_path and os.path.isfile(args.csv_data_path):   # csv_data_path was provided and it's a valid file
+    media_metadata = pd.read_csv(args.csv_data_path, low_memory=False)    # load the dataframe from the csv file
+    # Convert 'cust.MediaDate' column to datetime
+    media_metadata['cust.MediaDate'] = pd.to_datetime(media_metadata['cust.MediaDate'])
+else: 
+    media_files = []
+    for curr_folder in args.folder:
+        media_files += list_files_in_folder(folder = curr_folder, recursive=args.recursive)
+        logger.info(f"Adding folder: [{curr_folder}]")
 
-with exiftool.ExifToolHelper() as et:
-    metadata = et.get_metadata(media_files)
+    ## Adding metadata with the EXIFTOOL
+    #with exiftool.ExifToolHelper() as et:
+        #metadata = et.get_metadata(media_files)
 
-media_metadata = pd.DataFrame.from_dict(metadata)
+    # same as above, but with the progress bar
+    from tqdm import tqdm
+    with exiftool.ExifToolHelper() as et:
+        metadata = []
+        for media_file in tqdm(media_files, desc="Processing files", unit="file"):
+            metadata.extend(et.get_metadata([media_file]))  # assuming get_metadata can work with one file at a time
 
-# Update 'cust.MediaDate' column
-def try_to_parse(date_str, format_str):
-    try:
-        return pd.to_datetime(date_str, format=format_str)
-    except:
-        return None
 
-media_metadata['cust.MediaDate'] = media_metadata.apply(
-    lambda row: try_to_parse(row['EXIF:DateTimeOriginal'], "%Y:%m:%d %H:%M:%S") 
-                if pd.notnull(row['EXIF:DateTimeOriginal']) 
-                else try_to_parse(row['QuickTime:CreateDate'], "%Y:%m:%d %H:%M:%S") 
-                if pd.notnull(row['QuickTime:CreateDate']) 
-                else None, 
-    axis=1)
+    media_metadata = pd.DataFrame.from_dict(metadata)
+
+    # Update 'cust.MediaDate' column
+    def try_to_parse(date_str, format_str):
+        try:
+            return pd.to_datetime(date_str, format=format_str)
+        except:
+            return None
+
+    media_metadata['cust.MediaDate'] = media_metadata.apply(
+        lambda row: try_to_parse(row['EXIF:DateTimeOriginal'], "%Y:%m:%d %H:%M:%S") 
+                    if pd.notnull(row['EXIF:DateTimeOriginal']) 
+                    else try_to_parse(row['QuickTime:CreateDate'], "%Y:%m:%d %H:%M:%S") 
+                    if pd.notnull(row['QuickTime:CreateDate']) 
+                    else None, 
+        axis=1)
 
 # filter by date
 end_date = args.end_date

@@ -269,7 +269,7 @@ def bulk_confirm(action):
 def add_gps_to_image(row):
     import subprocess
     if pd.notnull(row['suggested.approved']) and row['suggested.approved']:
-        print(f"Applying GPS data to file: {row['SourceFile']}")
+        # print(f"Applying GPS data to file: {row['SourceFile']}")
         comment_text = f"GPS data is copied from the file {row['suggested.SourceFile']}"
         label_text = "GPSCopy"
         subprocess.run(["exiftool", 
@@ -285,10 +285,19 @@ def add_gps_to_image(row):
                        check=True)
 
 
+from tqdm import tqdm
+
 def apply_gps_data():
-    # Apply the function to each row in media_df where 'suggested.approved' is True
-    media_df.apply(add_gps_to_image, axis=1)
+    for i in tqdm(media_df.index, total=media_df.shape[0]):
+        row = media_df.loc[i]
+        add_gps_to_image(row)
     print("All approved changes has been implemented")
+
+
+# def apply_gps_data():
+#     # Apply the function to each row in media_df where 'suggested.approved' is True
+#     media_df.apply(add_gps_to_image, axis=1)
+#     print("All approved changes has been implemented")
 
 
 def close(save):
