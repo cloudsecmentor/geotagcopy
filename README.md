@@ -17,7 +17,7 @@ Cameras like the Sony A6000 take great photos but lack GPS. Meanwhile, phones ca
 
 - **Python 3.9+** with tkinter support
 - **[ExifTool](https://exiftool.org/)** installed and on PATH when running from source
-- **customtkinter** (installed automatically via requirements.txt)
+- **customtkinter** and **tkintermapview** (installed automatically via requirements.txt)
 
 ## Setup
 
@@ -85,17 +85,20 @@ make build-macos
 ### Bundling ExifTool
 
 ExifTool is still required for reading and writing metadata. Packaged builds
-will use a system `exiftool` if one is available on PATH. To make the package
-fully self-contained, place an executable ExifTool distribution here before
-building:
+automatically download a pinned ExifTool release into `vendor/exiftool/` before
+running PyInstaller, then include it in the app bundle and one-file executable.
+This makes `GeoTagCopy.app` work when launched from Finder without relying on a
+Terminal `PATH`.
+
+If you need to supply ExifTool manually, place the executable distribution here
+before building:
 
 ```text
 vendor/exiftool/exiftool
 ```
 
-When that file exists, `scripts/build_macos.py` includes `vendor/exiftool/` in
-the app, and GeoTagCopy will prefer the bundled executable at runtime. You can
-also point a built app at a specific ExifTool binary with:
+When that file exists, `scripts/build_macos.py` uses it instead of downloading.
+You can also point a built app at a specific ExifTool binary with:
 
 ```bash
 GEOTAGCOPY_EXIFTOOL="/path/to/exiftool" ./dist/GeoTagCopy

@@ -137,6 +137,33 @@ class TestExifToolLookup(unittest.TestCase):
             with patch("geotagcopy.core.shutil.which", return_value="/usr/bin/exiftool"):
                 self.assertEqual(get_exiftool_exe(), "/usr/bin/exiftool")
 
+    def test_finds_bundled_exiftool_in_macos_app_resources(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            executable = os.path.join(
+                tmpdir, "GeoTagCopy.app", "Contents", "MacOS", "GeoTagCopy"
+            )
+            exiftool = os.path.join(
+                tmpdir,
+                "GeoTagCopy.app",
+                "Contents",
+                "Resources",
+                "exiftool",
+                "exiftool",
+            )
+            os.makedirs(os.path.dirname(executable))
+            os.makedirs(os.path.dirname(exiftool))
+            with open(exiftool, "w", encoding="utf-8") as f:
+                f.write("#!/bin/sh\n")
+            os.chmod(exiftool, 0o755)
+
+            with patch.dict(os.environ, {"GEOTAGCOPY_EXIFTOOL": ""}):
+                with patch("geotagcopy.core.sys.executable", executable):
+                    with patch("geotagcopy.core.shutil.which", return_value=None):
+                        self.assertEqual(
+                            os.path.realpath(get_exiftool_exe()),
+                            os.path.realpath(exiftool),
+                        )
+
 
 class TestParseExifDate(unittest.TestCase):
     def test_standard_format(self):

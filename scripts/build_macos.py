@@ -4,9 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import platform
+import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
+import urllib.request
 from pathlib import Path
 
 
@@ -15,6 +20,14 @@ APP_NAME = "GeoTagCopy"
 BUNDLE_IDENTIFIER = "com.geotagcopy.app"
 ENTRYPOINT = PROJECT_ROOT / "geotagcopy" / "__main__.py"
 VENDORED_EXIFTOOL = PROJECT_ROOT / "vendor" / "exiftool"
+EXIFTOOL_VERSION = "13.57"
+EXIFTOOL_ARCHIVE_NAME = f"Image-ExifTool-{EXIFTOOL_VERSION}.tar.gz"
+EXIFTOOL_ARCHIVE_URL = (
+    f"https://sourceforge.net/projects/exiftool/files/{EXIFTOOL_ARCHIVE_NAME}/download"
+)
+EXIFTOOL_ARCHIVE_SHA256 = (
+    "58f74f5cf84350693a00c4df236fd4810e5abaf25fab2d15eaa9dcc4872d4481"
+)
 
 
 def main() -> int:
@@ -32,6 +45,11 @@ def main() -> int:
         action="store_true",
         help="Keep PyInstaller caches between builds.",
     )
+    parser.add_argument(
+        "--no-bundle-exiftool",
+        action="store_true",
+        help="Skip downloading and bundling ExifTool.",
+    )
     args = parser.parse_args()
 
     if platform.system() != "Darwin":
@@ -44,6 +62,9 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+
+    if not args.no_bundle_exiftool:
+        _ensure_vendored_exiftool()
 
     targets = ("app", "onefile") if args.target == "all" else (args.target,)
     for target in targets:
@@ -104,6 +125,64 @@ def _run_pyinstaller(target: str, clean: bool) -> None:
 
 def _has_vendored_exiftool() -> bool:
     return (VENDORED_EXIFTOOL / "exiftool").is_file()
+
+
+def _ensure_vendored_exiftool() -> None:
+    if _has_vendored_exiftool() and (VENDORED_EXIFTOOL / "lib").is_dir():
+        print(f"Using bundled ExifTool from {VENDORED_EXIFTOOL}")
+        return
+
+    print(f"Downloading ExifTool {EXIFTOOL_VERSION} for app bundling...")
+    VENDORED_EXIFTOOL.parent.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        archive_path = tmp_path / EXIFTOOL_ARCHIVE_NAME
+        urllib.request.urlretrieve(EXIFTOOL_ARCHIVE_URL, archive_path)
+        _verify_sha256(archive_path, EXIFTOOL_ARCHIVE_SHA256)
+
+        extract_root = tmp_path / "extract"
+        extract_root.mkdir()
+        _safe_extract_tar(archive_path, extract_root)
+
+        source = extract_root / f"Image-ExifTool-{EXIFTOOL_VERSION}"
+        if not (source / "exiftool").is_file() or not (source / "lib").is_dir():
+            raise RuntimeError(f"Unexpected ExifTool archive layout in {source}")
+
+        shutil.rmtree(VENDORED_EXIFTOOL, ignore_errors=True)
+        VENDORED_EXIFTOOL.mkdir(parents=True)
+        shutil.copy2(source / "exiftool", VENDORED_EXIFTOOL / "exiftool")
+        shutil.copytree(source / "lib", VENDORED_EXIFTOOL / "lib")
+        (VENDORED_EXIFTOOL / "exiftool").chmod(0o755)
+
+    print(f"Vendored ExifTool installed at {VENDORED_EXIFTOOL}")
+
+
+def _verify_sha256(path: Path, expected_sha256: str) -> None:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+
+    actual_sha256 = digest.hexdigest()
+    if actual_sha256 != expected_sha256:
+        raise RuntimeError(
+            f"Checksum mismatch for {path.name}: expected {expected_sha256}, "
+            f"got {actual_sha256}"
+        )
+
+
+def _safe_extract_tar(archive_path: Path, destination: Path) -> None:
+    destination = destination.resolve()
+    with tarfile.open(archive_path, "r:gz") as archive:
+        for member in archive.getmembers():
+            target = (destination / member.name).resolve()
+            if destination != target and destination not in target.parents:
+                raise RuntimeError(f"Unsafe path in ExifTool archive: {member.name}")
+            if member.islnk() or member.issym():
+                raise RuntimeError(f"Unsupported link in ExifTool archive: {member.name}")
+
+        archive.extractall(destination)
 
 
 def _print_artifacts(targets: tuple[str, ...]) -> None:

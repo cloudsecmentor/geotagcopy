@@ -5,12 +5,18 @@ import shutil
 import subprocess
 import threading
 import tkinter as tk
+import webbrowser
 from tkinter import filedialog, messagebox
 from io import BytesIO
 from typing import Optional
 
 import customtkinter as ctk
 from PIL import Image, ImageOps, UnidentifiedImageError
+
+try:
+    from tkintermapview import TkinterMapView
+except ImportError:
+    TkinterMapView = None
 
 try:
     from pillow_heif import register_heif_opener
@@ -385,7 +391,7 @@ class GeoTagCopyApp(ctk.CTk):
         header.grid_columnconfigure(1, weight=1)
 
         donor_preview = self._create_preview_widget(header, group.donor, (92, 92))
-        donor_preview.grid(row=0, column=0, rowspan=3, padx=(0, 12), sticky="nw")
+        donor_preview.grid(row=0, column=0, rowspan=4, padx=(0, 12), sticky="nw")
 
         ctk.CTkLabel(
             header,
@@ -405,13 +411,6 @@ class GeoTagCopyApp(ctk.CTk):
             text_color=COLOR_LOCATION,
         ).grid(row=1, column=1, sticky="w", pady=(6, 0))
 
-        ctk.CTkLabel(
-            header,
-            text=f"{len(group.matches)} file(s)",
-            font=FONT_SMALL,
-            text_color=COLOR_DONOR,
-        ).grid(row=0, column=2, sticky="e")
-
         donor_date = (
             group.donor.date.strftime("%Y-%m-%d %H:%M") if group.donor.date else "?"
         )
@@ -420,14 +419,47 @@ class GeoTagCopyApp(ctk.CTk):
             text=f"GPS from: {group.donor.filename}",
             font=FONT_BODY,
             text_color=COLOR_DONOR,
-        ).grid(row=2, column=1, columnspan=2, sticky="w", pady=(6, 0))
+        ).grid(row=2, column=1, sticky="w", pady=(6, 0))
 
         ctk.CTkLabel(
             header,
             text=f"Taken: {donor_date}",
             font=FONT_SMALL,
             text_color=COLOR_DONOR,
-        ).grid(row=3, column=1, columnspan=2, sticky="w")
+        ).grid(row=3, column=1, sticky="w")
+
+        side_panel = ctk.CTkFrame(header, fg_color="transparent")
+        side_panel.grid(row=0, column=2, rowspan=4, padx=(12, 0), sticky="ne")
+        side_panel.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            side_panel,
+            text=f"{len(group.matches)} file(s)",
+            font=FONT_SMALL,
+            text_color=COLOR_DONOR,
+        ).grid(row=0, column=0, pady=(0, 4), sticky="e")
+
+        donor_actions = ctk.CTkFrame(side_panel, fg_color="transparent")
+        donor_actions.grid(row=1, column=0, pady=(0, 8), sticky="e")
+
+        ctk.CTkButton(
+            donor_actions,
+            text="Select donor",
+            width=92,
+            height=28,
+            command=lambda: self._set_group_approval(group, True),
+        ).pack(side="left", padx=(0, 4))
+
+        ctk.CTkButton(
+            donor_actions,
+            text="Deselect donor",
+            width=108,
+            height=28,
+            command=lambda: self._set_group_approval(group, False),
+        ).pack(side="left")
+
+        donor_map = self._create_donor_map_widget(side_panel, group.donor, (220, 120))
+        donor_map.grid(row=2, column=0, sticky="e")
 
         gallery = ctk.CTkFrame(card, fg_color="transparent")
         gallery.grid(row=2, column=0, padx=14, pady=(0, 14), sticky="ew")
@@ -542,6 +574,80 @@ class GeoTagCopyApp(ctk.CTk):
     @staticmethod
     def _accent_for_index(idx: int) -> tuple[str, str]:
         return DONOR_ACCENTS[idx % len(DONOR_ACCENTS)]
+
+    def _create_donor_map_widget(
+        self, parent: ctk.CTkFrame, donor: MediaFile, size: tuple[int, int]
+    ) -> tk.Widget:
+        if donor.has_gps and TkinterMapView is not None:
+            map_widget = TkinterMapView(
+                parent,
+                width=size[0],
+                height=size[1],
+                corner_radius=8,
+            )
+            map_widget.set_position(donor.latitude, donor.longitude, marker=True)
+            map_widget.set_zoom(14)
+            return map_widget
+
+        return self._create_map_fallback(parent, donor, size)
+
+    def _create_map_fallback(
+        self, parent: ctk.CTkFrame, donor: MediaFile, size: tuple[int, int]
+    ) -> ctk.CTkFrame:
+        frame = ctk.CTkFrame(
+            parent,
+            width=size[0],
+            height=size[1],
+            fg_color=("#d9dde3", "#3a3d43"),
+            corner_radius=8,
+        )
+        frame.grid_propagate(False)
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_rowconfigure(0, weight=1)
+
+        if donor.has_gps:
+            message = (
+                "Map preview unavailable\n"
+                f"{self._format_coordinates(donor)}\n"
+                "Install tkintermapview for embedded maps."
+            )
+        else:
+            message = "No GPS coordinates\navailable for this donor"
+
+        ctk.CTkLabel(
+            frame,
+            text=message,
+            font=FONT_SMALL,
+            text_color=COLOR_DONOR,
+            justify="center",
+        ).grid(row=0, column=0, padx=8, pady=(8, 4), sticky="s")
+
+        if donor.has_gps:
+            ctk.CTkButton(
+                frame,
+                text="Open map",
+                width=92,
+                height=26,
+                command=lambda: self._open_map_in_browser(donor),
+            ).grid(row=1, column=0, padx=8, pady=(0, 8), sticky="n")
+
+        return frame
+
+    @staticmethod
+    def _format_coordinates(media_file: MediaFile) -> str:
+        if not media_file.has_gps:
+            return "?"
+        return f"{media_file.latitude:.5f}, {media_file.longitude:.5f}"
+
+    @staticmethod
+    def _open_map_in_browser(media_file: MediaFile):
+        if not media_file.has_gps:
+            return
+        webbrowser.open(
+            "https://www.openstreetmap.org/"
+            f"?mlat={media_file.latitude}&mlon={media_file.longitude}"
+            f"#map=16/{media_file.latitude}/{media_file.longitude}"
+        )
 
     def _bind_open_detail(self, widget: tk.Widget, match: GeoMatch):
         widget.bind("<Button-1>", lambda _event: self._open_detail_window(match))
@@ -865,6 +971,13 @@ class GeoTagCopyApp(ctk.CTk):
         return panel
 
     # -- Bulk selection --------------------------------------------------
+
+    def _set_group_approval(self, group: LocationGroup, approved: bool):
+        for match in group.matches:
+            match.approved = approved
+            var = self.match_vars.get(match.untagged.path)
+            if var is not None:
+                var.set(approved)
 
     def _select_all(self):
         for var in self.match_vars.values():

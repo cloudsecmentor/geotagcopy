@@ -41,22 +41,20 @@ def _bundled_exiftool_candidates() -> list[Path]:
     candidates: list[Path] = []
     bundle_root = getattr(sys, "_MEIPASS", None)
     if bundle_root:
-        root = Path(bundle_root)
-        candidates.extend(
-            [
-                root / "exiftool" / "exiftool",
-                root / "bin" / "exiftool",
-            ]
-        )
+        candidates.extend(_exiftool_locations(Path(bundle_root)))
+        candidates.extend(_exiftool_locations(Path(bundle_root).parent / "Resources"))
 
     app_root = Path(sys.executable).resolve().parent
-    candidates.extend(
-        [
-            app_root / "exiftool" / "exiftool",
-            app_root / "bin" / "exiftool",
-        ]
-    )
+    candidates.extend(_exiftool_locations(app_root))
+    candidates.extend(_exiftool_locations(app_root.parent / "Resources"))
     return candidates
+
+
+def _exiftool_locations(root: Path) -> list[Path]:
+    return [
+        root / "exiftool" / "exiftool",
+        root / "bin" / "exiftool",
+    ]
 
 
 def _is_executable(path: str | Path) -> bool:
