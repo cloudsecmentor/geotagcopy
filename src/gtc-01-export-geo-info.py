@@ -8,6 +8,7 @@ import logging
 import sys
 import datetime
 import pandas as pd
+import shlex
 
 def get_supported_extensions():
     file_extensions = ['jpg', 'jpeg', 'heic', 'mov', 'png', 'mp4']
@@ -172,12 +173,14 @@ def exec_next_step (exec_command, force = False):
 
 
 
-### R analysis
-next_command = f"Rscript r_analysis/metadata-01.R --file {csv_file_name}"
+### Analyze metadata and add GPS recommendations
+csv_file_arg = shlex.quote(csv_file_name)
+python_arg = shlex.quote(sys.executable)
+next_command = f"{python_arg} src/gtc-02-analyze-metadata.py --file {csv_file_arg}"
 exec_next_step(next_command)
 
 ### Review and Apply GPS Data
-next_command = f"python3 src/gtc-03-confirm-UI.py -f {csv_file_name}"
+next_command = f"{python_arg} src/gtc-03-confirm-UI.py -f {csv_file_arg}"
 exec_next_step(next_command)
 
 

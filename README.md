@@ -1,56 +1,70 @@
-# GPS Tag Copy Utility
+# GeoTagCopy - GPS Tag Copy Utility
 
-This is a tool designed to add location information, also known as GPS tags, to photos taken by a camera that does not support or lacks GPS tags. This is particularly useful when you want to sort photos not only by date but also by location. 
+Copy GPS coordinates from geotagged photos (e.g. iPhone) to untagged ones (e.g. Sony camera exports), matching by closest timestamp.
 
-## Problem Statement
+## Problem
 
-Cameras such as the Sony A6000 take wonderful pictures but lack the ability to add location information. Photos and videos taken with a mobile device like iPhone X contain location information, but the same is not true for screenshots or other types of media. There are apps available that allow you to transfer the information from your phone's GPS tracker if you're taking pictures with your camera, but they are not retroactive, leaving older photos without location tags. This tool is designed to address these gaps.
+Cameras like the Sony A6000 take great photos but lack GPS. Meanwhile, phones capture location with every shot. This tool bridges the gap by copying GPS tags from phone photos to camera photos based on when they were taken.
 
-## Solution
+## How It Works
 
-This utility transfers the location information from an iPhone photo to the photo without GPS. It finds the closest photo in time on the iPhone that has a GPS tag. The time difference between the two should be the smallest. Once it finds the photo, it copies the GPS coordinates from the iPhone photo onto the photo from the camera.
+1. Point the app at two folders: one with **geotagged** photos (iPhone), one with **untagged** photos (camera)
+2. The app reads EXIF metadata, matches each untagged file to the nearest-in-time tagged file with GPS
+3. Results are grouped by GPS location so you can review at a glance
+4. Select which files to tag, then apply -- GPS coordinates are written via ExifTool
 
-## Implementation
+## Requirements
 
-The utility comprises three modules written in Python and R. The Python module collects information about the files and uses the Exif tool to add information about these files. The R module is used to find the closest photo in time with GPS coordinates for a photo that does not have GPS coordinates.
+- **Python 3.9+** with tkinter support
+- **[ExifTool](https://exiftool.org/)** installed and on PATH
+- **customtkinter** (installed automatically via requirements.txt)
 
-This tool also accommodates situations with multiple authors. Different people might be walking around with different phones, hence there may be different sources of geolocation data.
+## Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # macOS/Linux
+# .venv\Scripts\activate    # Windows
+pip install -r requirements.txt
+```
 
 ## Usage
 
-See details in
+Launch the GUI:
+
+```bash
+python -m geotagcopy
 ```
-python3 src/gtc-01-export-geo-info.py -h
+
+Or pre-fill folder paths:
+
+```bash
+python -m geotagcopy \
+  -t "/path/to/tagged/photos" \
+  -u "/path/to/untagged/photos"
 ```
 
-The tool provides a visual interface that lets you compare which exact photos are going to receive new GPS coordinates and from where they'll get them. You can approve and confirm the application of a geotag or reject it. After you've reviewed the proposals and if you're happy with them, you can approve all the suggested GPS positions.
+### Running Tests
 
-Once you've approved, you can apply the data. For each file that it changes, the system adds a specific label stating that a GPS copy happened for that file, and it adds information about from which file the GPS coordinates were taken. 
+```bash
+python -m unittest tests.test_core -v
+```
 
-Once all the information is updated, you can search your files, not only by when the shot was taken but also by the location. 
+## What Gets Written
 
-## Results
+For each file that receives GPS tags, the tool:
+- Writes `XMP:GPSLatitude`, `XMP:GPSLongitude`, and `XMP:GPSAltitude`
+- Sets `Label=GPSCopy` so you can filter these files later
+- Adds a `Comment` noting which file the GPS was copied from
 
-After using this utility, you can import the updated photos into programs like Adobe Lightroom and do a search by address. For example, having GPS coordinates, you could set a city and search by city. The utility adds a label called 'GPS copy' to photos that have had their GPS info transferred from some other photo. 
+## Legacy Pipeline
 
-This utility has proved beneficial in managing a large number of photos taken over time with different devices. 
+The original 3-step pipeline is preserved under `src/`, now with Python-only export, matching, and Tkinter review steps.
 
+## Similar Projects
 
-## Similar repos and links used
-https://github.com/nperony/pybatchgeotag/blob/master/pybatchgeotag.py
-
-
-https://github.com/kburchfiel/media_geotag_mapper
-
-
-https://www.youtube.com/watch?v=5MIYyw9E2wY
-
-
-https://pypi.org/project/geotagger/
-
-
-https://python3-exiv2.readthedocs.io/en/latest/tutorial.html#reading-and-writing-exif-tags
-
-
-https://exiftool.org/
+- [pybatchgeotag](https://github.com/nperony/pybatchgeotag/blob/master/pybatchgeotag.py)
+- [media_geotag_mapper](https://github.com/kburchfiel/media_geotag_mapper)
+- [geotagger (PyPI)](https://pypi.org/project/geotagger/)
+- [ExifTool](https://exiftool.org/)
 
