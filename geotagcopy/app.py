@@ -40,6 +40,7 @@ FONT_TITLE = ("", 22, "bold")
 FONT_HEADING = ("", 15, "bold")
 FONT_BODY = ("", 13)
 FONT_SMALL = ("", 12)
+FONT_BADGE = ("", 11, "bold")
 FONT_MONO = ("Courier", 12)
 
 COLOR_GROUP_BG = ("#e8ecf1", "#2a2d32")
@@ -48,6 +49,17 @@ COLOR_LOCATION = ("#1a6dcc", "#5da4f0")
 COLOR_DONOR = ("#555555", "#b0b0b0")
 COLOR_TIMEDIFF = ("#996600", "#e6a800")
 COLOR_SUCCESS = ("#1a8c1a", "#3dcc3d")
+COLOR_BADGE_TEXT = ("#101418", "#101418")
+
+DONOR_ACCENTS = [
+    ("#b7791f", "#f2b705"),
+    ("#0f8f78", "#1fc7a6"),
+    ("#c24141", "#f06a6a"),
+    ("#4f74c8", "#8ab4ff"),
+    ("#9b4ec4", "#d17aff"),
+    ("#5f9d3d", "#91d36e"),
+    ("#c76522", "#ff8f3d"),
+]
 
 IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "heic", "tif", "tiff"}
 VIDEO_EXTENSIONS = {"mov", "mp4", "m4v", "avi"}
@@ -235,7 +247,7 @@ class GeoTagCopyApp(ctk.CTk):
         if not check_exiftool():
             messagebox.showerror(
                 "ExifTool not found",
-                "ExifTool must be installed and available on PATH.\n"
+                "ExifTool must be bundled with GeoTagCopy or available on PATH.\n"
                 "Install from https://exiftool.org/",
             )
             return
@@ -354,11 +366,22 @@ class GeoTagCopyApp(ctk.CTk):
         self.apply_btn.configure(state=state)
 
     def _create_group_card(self, group: LocationGroup, idx: int) -> ctk.CTkFrame:
-        card = ctk.CTkFrame(self.results_frame, fg_color=COLOR_GROUP_BG, corner_radius=10)
+        accent = self._accent_for_index(idx)
+        donor_badge = f"GPS DONOR {idx + 1:02d}"
+        card = ctk.CTkFrame(
+            self.results_frame,
+            fg_color=COLOR_GROUP_BG,
+            corner_radius=10,
+            border_width=1,
+            border_color=accent,
+        )
         card.grid_columnconfigure(0, weight=1)
 
+        accent_strip = ctk.CTkFrame(card, height=5, fg_color=accent, corner_radius=4)
+        accent_strip.grid(row=0, column=0, padx=3, pady=(3, 0), sticky="ew")
+
         header = ctk.CTkFrame(card, fg_color="transparent")
-        header.grid(row=0, column=0, padx=14, pady=(12, 8), sticky="ew")
+        header.grid(row=1, column=0, padx=14, pady=(12, 8), sticky="ew")
         header.grid_columnconfigure(1, weight=1)
 
         donor_preview = self._create_preview_widget(header, group.donor, (92, 92))
@@ -366,10 +389,21 @@ class GeoTagCopyApp(ctk.CTk):
 
         ctk.CTkLabel(
             header,
+            text=donor_badge,
+            font=FONT_BADGE,
+            fg_color=accent,
+            text_color=COLOR_BADGE_TEXT,
+            corner_radius=999,
+            padx=8,
+            pady=3,
+        ).grid(row=0, column=1, sticky="w")
+
+        ctk.CTkLabel(
+            header,
             text=f"Location: {group.location_label}",
             font=FONT_HEADING,
             text_color=COLOR_LOCATION,
-        ).grid(row=0, column=1, sticky="w")
+        ).grid(row=1, column=1, sticky="w", pady=(6, 0))
 
         ctk.CTkLabel(
             header,
@@ -386,37 +420,52 @@ class GeoTagCopyApp(ctk.CTk):
             text=f"GPS from: {group.donor.filename}",
             font=FONT_BODY,
             text_color=COLOR_DONOR,
-        ).grid(row=1, column=1, columnspan=2, sticky="w", pady=(6, 0))
+        ).grid(row=2, column=1, columnspan=2, sticky="w", pady=(6, 0))
 
         ctk.CTkLabel(
             header,
             text=f"Taken: {donor_date}",
             font=FONT_SMALL,
             text_color=COLOR_DONOR,
-        ).grid(row=2, column=1, columnspan=2, sticky="w")
+        ).grid(row=3, column=1, columnspan=2, sticky="w")
 
         gallery = ctk.CTkFrame(card, fg_color="transparent")
-        gallery.grid(row=1, column=0, padx=14, pady=(0, 14), sticky="ew")
+        gallery.grid(row=2, column=0, padx=14, pady=(0, 14), sticky="ew")
         for col in range(3):
             gallery.grid_columnconfigure(col, weight=1, uniform=f"group-{idx}")
 
         for mi, match in enumerate(group.matches):
             row = mi // 3
             col = mi % 3
-            match_card = self._create_match_card(gallery, match)
+            match_card = self._create_match_card(gallery, match, donor_badge, accent)
             match_card.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
 
         return card
 
-    def _create_match_card(self, parent: ctk.CTkFrame, match: GeoMatch) -> ctk.CTkFrame:
+    def _create_match_card(
+        self,
+        parent: ctk.CTkFrame,
+        match: GeoMatch,
+        donor_badge: str,
+        accent: tuple[str, str],
+    ) -> ctk.CTkFrame:
         var = tk.BooleanVar(value=match.approved)
         self.match_vars[match.untagged.path] = var
 
         def on_toggle():
             match.approved = var.get()
 
-        card = ctk.CTkFrame(parent, fg_color=COLOR_CARD_BG, corner_radius=10)
+        card = ctk.CTkFrame(
+            parent,
+            fg_color=COLOR_CARD_BG,
+            corner_radius=10,
+            border_width=2,
+            border_color=accent,
+        )
         card.grid_columnconfigure(0, weight=1)
+
+        accent_strip = ctk.CTkFrame(card, height=4, fg_color=accent, corner_radius=4)
+        accent_strip.grid(row=0, column=0, sticky="ew", padx=2, pady=(2, 0))
 
         cb = ctk.CTkCheckBox(
             card,
@@ -425,10 +474,21 @@ class GeoTagCopyApp(ctk.CTk):
             command=on_toggle,
             width=24,
         )
-        cb.grid(row=0, column=0, padx=8, pady=(8, 0), sticky="nw")
+        cb.grid(row=1, column=0, padx=8, pady=(8, 0), sticky="nw")
+
+        ctk.CTkLabel(
+            card,
+            text=donor_badge,
+            font=FONT_BADGE,
+            fg_color=accent,
+            text_color=COLOR_BADGE_TEXT,
+            corner_radius=999,
+            padx=7,
+            pady=2,
+        ).grid(row=1, column=0, padx=8, pady=(8, 0), sticky="ne")
 
         preview = self._create_preview_widget(card, match.untagged, (180, 130))
-        preview.grid(row=1, column=0, padx=8, pady=(2, 6), sticky="n")
+        preview.grid(row=2, column=0, padx=8, pady=(2, 6), sticky="n")
         self._bind_open_detail(preview, match)
 
         filename = self._shorten(match.untagged.filename, 26)
@@ -439,7 +499,7 @@ class GeoTagCopyApp(ctk.CTk):
             justify="center",
             wraplength=185,
         )
-        name_label.grid(row=2, column=0, padx=8, sticky="ew")
+        name_label.grid(row=3, column=0, padx=8, sticky="ew")
         self._bind_open_detail(name_label, match)
 
         taken_label = ctk.CTkLabel(
@@ -449,7 +509,7 @@ class GeoTagCopyApp(ctk.CTk):
             text_color=COLOR_DONOR,
             wraplength=185,
         )
-        taken_label.grid(row=3, column=0, padx=8, pady=(2, 0), sticky="ew")
+        taken_label.grid(row=4, column=0, padx=8, pady=(2, 0), sticky="ew")
         self._bind_open_detail(taken_label, match)
 
         donor_label = ctk.CTkLabel(
@@ -459,7 +519,7 @@ class GeoTagCopyApp(ctk.CTk):
             text_color=COLOR_DONOR,
             wraplength=185,
         )
-        donor_label.grid(row=4, column=0, padx=8, pady=(2, 0), sticky="ew")
+        donor_label.grid(row=5, column=0, padx=8, pady=(2, 0), sticky="ew")
         self._bind_open_detail(donor_label, match)
 
         ctk.CTkLabel(
@@ -467,17 +527,21 @@ class GeoTagCopyApp(ctk.CTk):
             text=f"Time diff: {format_time_diff(match.time_diff_hours)}",
             font=FONT_MONO,
             text_color=COLOR_TIMEDIFF,
-        ).grid(row=5, column=0, padx=8, pady=(2, 6), sticky="ew")
+        ).grid(row=6, column=0, padx=8, pady=(2, 6), sticky="ew")
 
         ctk.CTkButton(
             card,
             text="Review",
             height=28,
             command=lambda: self._open_detail_window(match),
-        ).grid(row=6, column=0, padx=8, pady=(0, 8), sticky="ew")
+        ).grid(row=7, column=0, padx=8, pady=(0, 8), sticky="ew")
 
         self._bind_open_detail(card, match)
         return card
+
+    @staticmethod
+    def _accent_for_index(idx: int) -> tuple[str, str]:
+        return DONOR_ACCENTS[idx % len(DONOR_ACCENTS)]
 
     def _bind_open_detail(self, widget: tk.Widget, match: GeoMatch):
         widget.bind("<Button-1>", lambda _event: self._open_detail_window(match))

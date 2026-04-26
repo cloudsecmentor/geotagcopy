@@ -10,6 +10,7 @@ from geotagcopy.core import (
     MediaFile,
     GeoMatch,
     LocationGroup,
+    get_exiftool_exe,
     scan_folder,
     parse_exif_date,
     match_files,
@@ -118,6 +119,23 @@ class TestScanFolder(unittest.TestCase):
         names = {os.path.basename(f) for f in found}
         self.assertNotIn(".hidden.jpg", names)
         os.remove(os.path.join(self.tmpdir, ".hidden.jpg"))
+
+
+class TestExifToolLookup(unittest.TestCase):
+    def test_env_override_uses_executable_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "exiftool")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("#!/bin/sh\n")
+            os.chmod(path, 0o755)
+
+            with patch.dict(os.environ, {"GEOTAGCOPY_EXIFTOOL": path}):
+                self.assertEqual(get_exiftool_exe(), path)
+
+    def test_falls_back_to_path_lookup(self):
+        with patch.dict(os.environ, {"GEOTAGCOPY_EXIFTOOL": ""}):
+            with patch("geotagcopy.core.shutil.which", return_value="/usr/bin/exiftool"):
+                self.assertEqual(get_exiftool_exe(), "/usr/bin/exiftool")
 
 
 class TestParseExifDate(unittest.TestCase):

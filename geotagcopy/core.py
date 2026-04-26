@@ -2,9 +2,12 @@
 
 import json
 import os
+import shutil
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Optional, Callable
 
 SUPPORTED_EXTENSIONS = frozenset({
@@ -19,6 +22,46 @@ EXIFTOOL_DATE_TAGS = [
 EXIFTOOL_GPS_TAGS = [
     "-GPSLatitude", "-GPSLongitude", "-GPSAltitude",
 ]
+
+
+def get_exiftool_exe() -> Optional[str]:
+    """Return a bundled ExifTool executable when present, otherwise PATH."""
+    env_path = os.environ.get("GEOTAGCOPY_EXIFTOOL", "").strip()
+    if env_path and _is_executable(env_path):
+        return env_path
+
+    for candidate in _bundled_exiftool_candidates():
+        if _is_executable(candidate):
+            return str(candidate)
+
+    return shutil.which("exiftool")
+
+
+def _bundled_exiftool_candidates() -> list[Path]:
+    candidates: list[Path] = []
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if bundle_root:
+        root = Path(bundle_root)
+        candidates.extend(
+            [
+                root / "exiftool" / "exiftool",
+                root / "bin" / "exiftool",
+            ]
+        )
+
+    app_root = Path(sys.executable).resolve().parent
+    candidates.extend(
+        [
+            app_root / "exiftool" / "exiftool",
+            app_root / "bin" / "exiftool",
+        ]
+    )
+    return candidates
+
+
+def _is_executable(path: str | Path) -> bool:
+    path = Path(path).expanduser()
+    return path.is_file() and os.access(path, os.X_OK)
 
 
 @dataclass
@@ -64,10 +107,14 @@ class LocationGroup:
 
 
 def check_exiftool() -> bool:
-    """Return True if exiftool is available on PATH."""
+    """Return True if ExifTool is bundled or available on PATH."""
+    exiftool = get_exiftool_exe()
+    if not exiftool:
+        return False
+
     try:
         result = subprocess.run(
-            ["exiftool", "-ver"], capture_output=True, text=True, timeout=10
+            [exiftool, "-ver"], capture_output=True, text=True, timeout=10
         )
         return result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -126,6 +173,10 @@ def read_metadata(
     if not file_paths:
         return []
 
+    exiftool = get_exiftool_exe()
+    if not exiftool:
+        return [MediaFile(path=fp) for fp in file_paths]
+
     batch_size = 50
     all_meta: list[dict] = []
 
@@ -133,7 +184,7 @@ def read_metadata(
         batch = file_paths[i : i + batch_size]
         try:
             cmd = (
-                ["exiftool", "-json", "-n"]
+                [exiftool, "-json", "-n"]
                 + EXIFTOOL_DATE_TAGS
                 + EXIFTOOL_GPS_TAGS
                 + batch
@@ -282,6 +333,10 @@ def apply_gps_tags(
     approved = [m for m in matches if m.approved]
     success = 0
     errors: list[str] = []
+    exiftool = get_exiftool_exe()
+
+    if not exiftool:
+        return 0, ["ExifTool not found. Install it or bundle it with GeoTagCopy."]
 
     for i, match in enumerate(approved):
         donor = match.donor
@@ -290,7 +345,7 @@ def apply_gps_tags(
         comment = f"GPS copied from {donor.filename}"
 
         cmd = [
-            "exiftool",
+            exiftool,
             "-overwrite_original_in_place",
             f"-XMP:GPSLatitude={donor.latitude}",
             f"-XMP:GPSLongitude={donor.longitude}",

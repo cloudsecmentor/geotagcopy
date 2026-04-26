@@ -16,7 +16,7 @@ Cameras like the Sony A6000 take great photos but lack GPS. Meanwhile, phones ca
 ## Requirements
 
 - **Python 3.9+** with tkinter support
-- **[ExifTool](https://exiftool.org/)** installed and on PATH
+- **[ExifTool](https://exiftool.org/)** installed and on PATH when running from source
 - **customtkinter** (installed automatically via requirements.txt)
 
 ## Setup
@@ -44,10 +44,90 @@ python -m geotagcopy \
   -u "/path/to/untagged/photos"
 ```
 
+## macOS App Builds
+
+GeoTagCopy can be packaged on macOS with PyInstaller so the target Mac does not
+need Python or the Python dependencies installed.
+
+Install build dependencies:
+
+```bash
+make build-deps
+```
+
+Build a draggable macOS app bundle:
+
+```bash
+make build-macos-app
+```
+
+The app will be created at `dist/GeoTagCopy.app`. You can drag it into
+`/Applications` or run it directly.
+
+Build a single executable file:
+
+```bash
+make build-macos-onefile
+```
+
+The executable will be created at `dist/GeoTagCopy`. Run it from Terminal:
+
+```bash
+./dist/GeoTagCopy
+```
+
+Build both outputs:
+
+```bash
+make build-macos
+```
+
+### Bundling ExifTool
+
+ExifTool is still required for reading and writing metadata. Packaged builds
+will use a system `exiftool` if one is available on PATH. To make the package
+fully self-contained, place an executable ExifTool distribution here before
+building:
+
+```text
+vendor/exiftool/exiftool
+```
+
+When that file exists, `scripts/build_macos.py` includes `vendor/exiftool/` in
+the app, and GeoTagCopy will prefer the bundled executable at runtime. You can
+also point a built app at a specific ExifTool binary with:
+
+```bash
+GEOTAGCOPY_EXIFTOOL="/path/to/exiftool" ./dist/GeoTagCopy
+```
+
+For sharing outside your own Mac, you may need Apple code signing and
+notarization so Gatekeeper accepts the app without warnings.
+
+## GitHub Releases
+
+The repository includes a GitHub Actions workflow that builds macOS release
+artifacts and publishes them to a GitHub Release.
+
+Create a release by pushing a version tag:
+
+```bash
+git tag v2.0.0
+git push origin v2.0.0
+```
+
+Or run **Build and Release** manually from the GitHub Actions tab and enter a
+version such as `v2.0.0`.
+
+Each release uploads:
+
+- `GeoTagCopy-<version>-macos-app.zip`: draggable `GeoTagCopy.app`
+- `GeoTagCopy-<version>-macos-onefile.zip`: single executable file
+
 ### Running Tests
 
 ```bash
-python -m unittest tests.test_core -v
+make test
 ```
 
 ## What Gets Written
