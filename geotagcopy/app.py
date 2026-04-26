@@ -583,7 +583,7 @@ class GeoTagCopyApp(ctk.CTk):
                 parent,
                 width=size[0],
                 height=size[1],
-                corner_radius=8,
+                corner_radius=0,
             )
             map_widget.set_position(donor.latitude, donor.longitude, marker=True)
             map_widget.set_zoom(14)
