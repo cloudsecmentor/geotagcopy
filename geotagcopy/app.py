@@ -87,9 +87,12 @@ class GeoTagCopyApp(ctk.CTk):
         self.minsize(750, 550)
 
         self.groups: list[LocationGroup] = []
+        self._source_matches: list[GeoMatch] = []
         self.match_vars: dict[str, tk.BooleanVar] = {}
         self._group_widgets: list[ctk.CTkFrame] = []
         self._thumbnail_cache: dict[tuple[str, int, int], ctk.CTkImage] = {}
+        self._filter_refresh_after_id: Optional[str] = None
+        self._suppress_time_filter_refresh = False
         self.page_size = 60
         self.current_page = 0
         self.total_pages = 1
@@ -343,6 +346,7 @@ class GeoTagCopyApp(ctk.CTk):
         unit = self._time_unit_btn.get()
         self._max_diff_hours = value * _UNIT_HOURS_FACTOR[unit]
         self._update_time_entry_display(value, unit)
+        self._schedule_refilter_results()
 
     def _on_time_entry_confirm(self, _event=None):
         try:
@@ -354,6 +358,7 @@ class GeoTagCopyApp(ctk.CTk):
         self._max_diff_hours = value * _UNIT_HOURS_FACTOR[unit]
         clamped = min(value, _UNIT_SLIDER_MAX[unit])
         self._time_diff_slider.set(clamped)
+        self._schedule_refilter_results()
 
     def _on_time_unit_change(self, new_unit: str):
         display = self._max_diff_hours / _UNIT_HOURS_FACTOR[new_unit]
@@ -363,6 +368,7 @@ class GeoTagCopyApp(ctk.CTk):
         )
         self._time_diff_slider.set(min(display, _UNIT_SLIDER_MAX[new_unit]))
         self._update_time_entry_display(display, new_unit)
+        self._schedule_refilter_results()
 
     def _update_time_entry_display(self, value: float, unit: str):
         if unit == "min":
@@ -373,6 +379,55 @@ class GeoTagCopyApp(ctk.CTk):
             text = f"{value:.1f}"
         self._time_diff_entry.delete(0, "end")
         self._time_diff_entry.insert(0, text)
+
+    def _set_time_filter_display(self, hours: float, unit: str):
+        if unit not in _UNIT_HOURS_FACTOR:
+            unit = "day" if hours >= 24 else "hour"
+        self._max_diff_hours = max(0.0, hours)
+        display = self._max_diff_hours / _UNIT_HOURS_FACTOR[unit]
+        self._suppress_time_filter_refresh = True
+        try:
+            self._time_unit_btn.set(unit)
+            self._time_diff_slider.configure(
+                to=_UNIT_SLIDER_MAX[unit],
+                number_of_steps=_UNIT_SLIDER_STEPS[unit],
+            )
+            self._time_diff_slider.set(min(display, _UNIT_SLIDER_MAX[unit]))
+            self._update_time_entry_display(display, unit)
+        finally:
+            self._suppress_time_filter_refresh = False
+
+    def _schedule_refilter_results(self):
+        if self._suppress_time_filter_refresh:
+            return
+        if not self._source_matches:
+            return
+        if self._filter_refresh_after_id is not None:
+            self.after_cancel(self._filter_refresh_after_id)
+        self._filter_refresh_after_id = self.after(250, self._refilter_results)
+
+    def _refilter_results(self):
+        self._filter_refresh_after_id = None
+        if not self._source_matches:
+            return
+
+        self.groups = group_matches(self._filtered_source_matches())
+        self.current_page = 0
+        self._display_groups()
+
+        shown = len(self._all_matches())
+        total = len(self._source_matches)
+        self._set_status(
+            f"Showing {shown}/{total} matches within {format_time_diff(self._max_diff_hours)}",
+            1.0,
+        )
+
+    def _filtered_source_matches(self) -> list[GeoMatch]:
+        return [
+            match
+            for match in self._source_matches
+            if match.time_diff_hours <= self._max_diff_hours
+        ]
 
     def _scan_and_match(self):
         tagged_folder = self.tagged_var.get().strip()
@@ -397,15 +452,23 @@ class GeoTagCopyApp(ctk.CTk):
         self.select_all_btn.configure(state="disabled")
         self.deselect_all_btn.configure(state="disabled")
         self.save_results_btn.configure(state="disabled")
+        self._source_matches = []
+        self.groups = []
 
+        max_time_diff_hours = self._max_diff_hours
         thread = threading.Thread(
             target=self._scan_worker,
-            args=(tagged_folder, untagged_folder),
+            args=(tagged_folder, untagged_folder, max_time_diff_hours),
             daemon=True,
         )
         thread.start()
 
-    def _scan_worker(self, tagged_folder: str, untagged_folder: str):
+    def _scan_worker(
+        self,
+        tagged_folder: str,
+        untagged_folder: str,
+        max_time_diff_hours: float,
+    ):
         try:
             self.after(0, self._set_status, "Scanning tagged folder...", 0.05)
             tagged_paths = scan_folder(tagged_folder)
@@ -452,16 +515,19 @@ class GeoTagCopyApp(ctk.CTk):
             self.after(0, self._set_status, "Matching files...", 0.85)
             matches = match_files(
                 tagged_files, untagged_files,
-                max_time_diff_hours=self._max_diff_hours,
+                max_time_diff_hours=max_time_diff_hours,
             )
 
             self.after(0, self._set_status, "Grouping by location...", 0.95)
-            self.groups = group_matches(matches)
+            self._source_matches = matches
+            self.groups = group_matches(self._filtered_source_matches())
             self.current_page = 0
 
             n_matches = sum(len(g.matches) for g in self.groups)
+            total_matches = len(self._source_matches)
             msg = (
-                f"Done: {n_matches} file(s) matched across "
+                f"Done: showing {n_matches}/{total_matches} file(s) within "
+                f"{format_time_diff(self._max_diff_hours)} across "
                 f"{len(self.groups)} location group(s)"
             )
             self.after(0, self._set_status, msg, 1.0)
@@ -491,10 +557,19 @@ class GeoTagCopyApp(ctk.CTk):
         self._clear_results_widgets()
 
         if not self.groups:
+            if self._source_matches:
+                text = (
+                    f"No matches within {format_time_diff(self._max_diff_hours)}.\n"
+                    "Increase Max time diff to show more saved matches."
+                )
+            else:
+                text = (
+                    "No matches found. The tagged folder may lack GPS data,\n"
+                    "or untagged files may have no date information."
+                )
             lbl = ctk.CTkLabel(
                 self.results_frame,
-                text="No matches found. The tagged folder may lack GPS data,\n"
-                "or untagged files may have no date information.",
+                text=text,
                 font=FONT_BODY,
                 text_color=("gray50", "gray60"),
             )
@@ -1213,15 +1288,16 @@ class GeoTagCopyApp(ctk.CTk):
         }
 
     @staticmethod
-    def _media_from_dict(raw: dict) -> MediaFile:
-        def optional_float(value) -> Optional[float]:
-            if value is None:
-                return None
-            try:
-                return float(value)
-            except (TypeError, ValueError):
-                return None
+    def _optional_float(value) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
 
+    @staticmethod
+    def _media_from_dict(raw: dict) -> MediaFile:
         date_raw = raw.get("date")
         parsed_date: Optional[datetime] = None
         if isinstance(date_raw, str) and date_raw.strip():
@@ -1234,9 +1310,9 @@ class GeoTagCopyApp(ctk.CTk):
             path=str(raw.get("path", "")),
             filename=str(raw.get("filename", "")),
             date=parsed_date,
-            latitude=optional_float(raw.get("latitude")),
-            longitude=optional_float(raw.get("longitude")),
-            altitude=optional_float(raw.get("altitude")),
+            latitude=GeoTagCopyApp._optional_float(raw.get("latitude")),
+            longitude=GeoTagCopyApp._optional_float(raw.get("longitude")),
+            altitude=GeoTagCopyApp._optional_float(raw.get("altitude")),
         )
 
     def _save_results(self):
@@ -1274,6 +1350,8 @@ class GeoTagCopyApp(ctk.CTk):
             "saved_at": datetime.now().isoformat(timespec="seconds"),
             "tagged_folder": self.tagged_var.get().strip(),
             "untagged_folder": self.untagged_var.get().strip(),
+            "max_time_diff_hours": self._max_diff_hours,
+            "time_diff_unit": self._time_unit_btn.get(),
             "matches": [
                 {
                     "untagged": self._media_to_dict(m.untagged),
@@ -1371,16 +1449,31 @@ class GeoTagCopyApp(ctk.CTk):
         if isinstance(untagged_folder, str):
             self.untagged_var.set(untagged_folder)
 
-        self.groups = group_matches(restored)
+        saved_max_diff = self._optional_float(payload.get("max_time_diff_hours"))
+        saved_unit = payload.get("time_diff_unit")
+        if saved_max_diff is not None:
+            self._set_time_filter_display(
+                saved_max_diff,
+                saved_unit if isinstance(saved_unit, str) else "hour",
+            )
+
+        self._source_matches = restored
+        self.groups = group_matches(self._filtered_source_matches())
         self.current_page = 0
         self._display_groups()
 
         total_matches = len(restored)
+        shown_matches = len(self._all_matches())
         self._set_status(
-            f"Loaded {total_matches} matches from {os.path.basename(load_path)}",
+            f"Loaded {total_matches} matches from {os.path.basename(load_path)}; "
+            f"showing {shown_matches} within {format_time_diff(self._max_diff_hours)}",
             1.0,
         )
-        messagebox.showinfo("Loaded", f"Loaded {total_matches} matched file(s).")
+        messagebox.showinfo(
+            "Loaded",
+            f"Loaded {total_matches} matched file(s).\n"
+            f"Showing {shown_matches} within current Max time diff.",
+        )
 
     # -- Apply tags ------------------------------------------------------
 
