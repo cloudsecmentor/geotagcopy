@@ -1,11 +1,14 @@
 """Modern cross-platform GUI for GeoTagCopy using CustomTkinter."""
 
+import json
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import tkinter as tk
 import webbrowser
+from datetime import datetime
 from tkinter import filedialog, messagebox
 from io import BytesIO
 from typing import Optional
@@ -70,6 +73,10 @@ DONOR_ACCENTS = [
 IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "heic", "tif", "tiff"}
 VIDEO_EXTENSIONS = {"mov", "mp4", "m4v", "avi"}
 
+_UNIT_HOURS_FACTOR = {"min": 1 / 60, "hour": 1.0, "day": 24.0}
+_UNIT_SLIDER_MAX = {"min": 43200, "hour": 720, "day": 30}
+_UNIT_SLIDER_STEPS = {"min": 720, "hour": 720, "day": 60}
+
 
 class GeoTagCopyApp(ctk.CTk):
     def __init__(self, tagged_folder: str = "", untagged_folder: str = ""):
@@ -83,6 +90,9 @@ class GeoTagCopyApp(ctk.CTk):
         self.match_vars: dict[str, tk.BooleanVar] = {}
         self._group_widgets: list[ctk.CTkFrame] = []
         self._thumbnail_cache: dict[tuple[str, int, int], ctk.CTkImage] = {}
+        self.page_size = 60
+        self.current_page = 0
+        self.total_pages = 1
 
         self.grid_rowconfigure(3, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -150,6 +160,42 @@ class GeoTagCopyApp(ctk.CTk):
             command=lambda: self._browse(self.untagged_var),
         ).grid(row=1, column=2, padx=(4, 16), pady=4)
 
+        time_row = ctk.CTkFrame(frame, fg_color="transparent")
+        time_row.grid(row=2, column=0, columnspan=3, padx=16, pady=(4, 4), sticky="ew")
+
+        ctk.CTkLabel(time_row, text="Max time diff:", font=FONT_BODY).pack(
+            side="left"
+        )
+
+        self._max_diff_hours = 24.0
+
+        self._time_diff_entry = ctk.CTkEntry(
+            time_row, width=72, height=32, font=FONT_BODY, justify="right"
+        )
+        self._time_diff_entry.pack(side="left", padx=(8, 4))
+        self._time_diff_entry.insert(0, "24")
+        self._time_diff_entry.bind("<Return>", self._on_time_entry_confirm)
+        self._time_diff_entry.bind("<FocusOut>", self._on_time_entry_confirm)
+
+        self._time_unit_btn = ctk.CTkSegmentedButton(
+            time_row,
+            values=["min", "hour", "day"],
+            command=self._on_time_unit_change,
+            font=FONT_SMALL,
+        )
+        self._time_unit_btn.set("hour")
+        self._time_unit_btn.pack(side="left", padx=(0, 8))
+
+        self._time_diff_slider = ctk.CTkSlider(
+            time_row,
+            from_=0,
+            to=720,
+            number_of_steps=720,
+            command=self._on_time_slider_change,
+        )
+        self._time_diff_slider.set(24)
+        self._time_diff_slider.pack(side="left", fill="x", expand=True)
+
         self.scan_btn = ctk.CTkButton(
             frame,
             text="Scan & Match",
@@ -158,8 +204,33 @@ class GeoTagCopyApp(ctk.CTk):
             command=self._scan_and_match,
         )
         self.scan_btn.grid(
-            row=2, column=0, columnspan=3, padx=16, pady=(8, 14), sticky="ew"
+            row=3, column=0, columnspan=3, padx=16, pady=(8, 14), sticky="ew"
         )
+
+        session_actions = ctk.CTkFrame(frame, fg_color="transparent")
+        session_actions.grid(
+            row=4, column=0, columnspan=3, padx=16, pady=(0, 12), sticky="ew"
+        )
+        session_actions.grid_columnconfigure(0, weight=1)
+
+        self.load_results_btn = ctk.CTkButton(
+            session_actions,
+            text="Load Results",
+            width=120,
+            height=32,
+            command=self._load_results,
+        )
+        self.load_results_btn.grid(row=0, column=0, sticky="w")
+
+        self.save_results_btn = ctk.CTkButton(
+            session_actions,
+            text="Save Results",
+            width=120,
+            height=32,
+            state="disabled",
+            command=self._save_results,
+        )
+        self.save_results_btn.grid(row=0, column=1, sticky="e")
 
     def _build_status_section(self):
         frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -212,6 +283,34 @@ class GeoTagCopyApp(ctk.CTk):
         )
         self.deselect_all_btn.pack(side="left", padx=6)
 
+        self.prev_page_btn = ctk.CTkButton(
+            frame,
+            text="< Prev",
+            width=88,
+            height=32,
+            state="disabled",
+            command=self._prev_page,
+        )
+        self.prev_page_btn.pack(side="left", padx=(12, 4))
+
+        self.page_label = ctk.CTkLabel(
+            frame,
+            text="Page 1/1",
+            font=FONT_SMALL,
+            text_color=COLOR_DONOR,
+        )
+        self.page_label.pack(side="left", padx=4)
+
+        self.next_page_btn = ctk.CTkButton(
+            frame,
+            text="Next >",
+            width=88,
+            height=32,
+            state="disabled",
+            command=self._next_page,
+        )
+        self.next_page_btn.pack(side="left", padx=(4, 0))
+
         self.apply_btn = ctk.CTkButton(
             frame,
             text="Apply GPS Tags",
@@ -240,6 +339,41 @@ class GeoTagCopyApp(ctk.CTk):
         if progress is not None:
             self.progress.set(progress)
 
+    def _on_time_slider_change(self, value: float):
+        unit = self._time_unit_btn.get()
+        self._max_diff_hours = value * _UNIT_HOURS_FACTOR[unit]
+        self._update_time_entry_display(value, unit)
+
+    def _on_time_entry_confirm(self, _event=None):
+        try:
+            value = float(self._time_diff_entry.get())
+        except ValueError:
+            return
+        value = max(0.0, value)
+        unit = self._time_unit_btn.get()
+        self._max_diff_hours = value * _UNIT_HOURS_FACTOR[unit]
+        clamped = min(value, _UNIT_SLIDER_MAX[unit])
+        self._time_diff_slider.set(clamped)
+
+    def _on_time_unit_change(self, new_unit: str):
+        display = self._max_diff_hours / _UNIT_HOURS_FACTOR[new_unit]
+        self._time_diff_slider.configure(
+            to=_UNIT_SLIDER_MAX[new_unit],
+            number_of_steps=_UNIT_SLIDER_STEPS[new_unit],
+        )
+        self._time_diff_slider.set(min(display, _UNIT_SLIDER_MAX[new_unit]))
+        self._update_time_entry_display(display, new_unit)
+
+    def _update_time_entry_display(self, value: float, unit: str):
+        if unit == "min":
+            text = str(int(round(value)))
+        elif value == int(value):
+            text = str(int(value))
+        else:
+            text = f"{value:.1f}"
+        self._time_diff_entry.delete(0, "end")
+        self._time_diff_entry.insert(0, text)
+
     def _scan_and_match(self):
         tagged_folder = self.tagged_var.get().strip()
         untagged_folder = self.untagged_var.get().strip()
@@ -262,6 +396,7 @@ class GeoTagCopyApp(ctk.CTk):
         self.apply_btn.configure(state="disabled")
         self.select_all_btn.configure(state="disabled")
         self.deselect_all_btn.configure(state="disabled")
+        self.save_results_btn.configure(state="disabled")
 
         thread = threading.Thread(
             target=self._scan_worker,
@@ -315,10 +450,14 @@ class GeoTagCopyApp(ctk.CTk):
             untagged_files = read_metadata(untagged_paths, untagged_progress)
 
             self.after(0, self._set_status, "Matching files...", 0.85)
-            matches = match_files(tagged_files, untagged_files)
+            matches = match_files(
+                tagged_files, untagged_files,
+                max_time_diff_hours=self._max_diff_hours,
+            )
 
             self.after(0, self._set_status, "Grouping by location...", 0.95)
             self.groups = group_matches(matches)
+            self.current_page = 0
 
             n_matches = sum(len(g.matches) for g in self.groups)
             msg = (
@@ -338,7 +477,7 @@ class GeoTagCopyApp(ctk.CTk):
 
     # -- Results display -------------------------------------------------
 
-    def _display_groups(self):
+    def _clear_results_widgets(self):
         for w in self._group_widgets:
             w.destroy()
         self._group_widgets.clear()
@@ -347,6 +486,9 @@ class GeoTagCopyApp(ctk.CTk):
 
         if hasattr(self, "placeholder") and self.placeholder.winfo_exists():
             self.placeholder.destroy()
+
+    def _display_groups(self):
+        self._clear_results_widgets()
 
         if not self.groups:
             lbl = ctk.CTkLabel(
@@ -358,18 +500,82 @@ class GeoTagCopyApp(ctk.CTk):
             )
             lbl.grid(row=0, column=0, pady=40)
             self._group_widgets.append(lbl)
+            self._update_pagination_controls(total_matches=0, start_idx=0, end_idx=0)
+            self.select_all_btn.configure(state="disabled")
+            self.deselect_all_btn.configure(state="disabled")
+            self.apply_btn.configure(state="disabled")
+            self.save_results_btn.configure(state="disabled")
             return
 
-        for idx, group in enumerate(self.groups):
-            card = self._create_group_card(group, idx)
-            card.grid(row=idx, column=0, padx=4, pady=6, sticky="ew")
+        all_matches = self._all_matches()
+        total_matches = len(all_matches)
+        self.total_pages = max(1, (total_matches + self.page_size - 1) // self.page_size)
+        self.current_page = min(self.current_page, self.total_pages - 1)
+
+        start_idx = self.current_page * self.page_size
+        end_idx = min(start_idx + self.page_size, total_matches)
+        visible_matches = all_matches[start_idx:end_idx]
+        visible_groups = group_matches(visible_matches)
+
+        for local_idx, group in enumerate(visible_groups):
+            global_idx = self._group_display_index(group.donor.path)
+            card = self._create_group_card(group, global_idx)
+            card.grid(row=local_idx, column=0, padx=4, pady=6, sticky="ew")
             self._group_widgets.append(card)
 
-        has_matches = any(self.match_vars)
+        has_matches = total_matches > 0
         state = "normal" if has_matches else "disabled"
         self.select_all_btn.configure(state=state)
         self.deselect_all_btn.configure(state=state)
         self.apply_btn.configure(state=state)
+        self.save_results_btn.configure(state=state)
+        self._update_pagination_controls(total_matches, start_idx + 1, end_idx)
+
+    def _update_pagination_controls(
+        self,
+        total_matches: int,
+        start_idx: int,
+        end_idx: int,
+    ):
+        if total_matches == 0:
+            self.page_label.configure(text="Page 0/0")
+            self.prev_page_btn.configure(state="disabled")
+            self.next_page_btn.configure(state="disabled")
+            return
+
+        self.page_label.configure(
+            text=(
+                f"Page {self.current_page + 1}/{self.total_pages}  "
+                f"(matches {start_idx}-{end_idx} of {total_matches})"
+            )
+        )
+        self.prev_page_btn.configure(
+            state="normal" if self.current_page > 0 else "disabled"
+        )
+        self.next_page_btn.configure(
+            state="normal" if self.current_page < self.total_pages - 1 else "disabled"
+        )
+
+    def _prev_page(self):
+        if self.current_page <= 0:
+            return
+        self.current_page -= 1
+        self._display_groups()
+
+    def _next_page(self):
+        if self.current_page >= self.total_pages - 1:
+            return
+        self.current_page += 1
+        self._display_groups()
+
+    def _all_matches(self) -> list[GeoMatch]:
+        return [m for group in self.groups for m in group.matches]
+
+    def _group_display_index(self, donor_path: str) -> int:
+        for idx, group in enumerate(self.groups):
+            if group.donor.path == donor_path:
+                return idx
+        return 0
 
     def _create_group_card(self, group: LocationGroup, idx: int) -> ctk.CTkFrame:
         accent = self._accent_for_index(idx)
@@ -993,12 +1199,193 @@ class GeoTagCopyApp(ctk.CTk):
             for m in group.matches:
                 m.approved = False
 
+    # -- Save / load results --------------------------------------------
+
+    @staticmethod
+    def _media_to_dict(media: MediaFile) -> dict:
+        return {
+            "path": media.path,
+            "filename": media.filename,
+            "date": media.date.isoformat() if media.date else None,
+            "latitude": media.latitude,
+            "longitude": media.longitude,
+            "altitude": media.altitude,
+        }
+
+    @staticmethod
+    def _media_from_dict(raw: dict) -> MediaFile:
+        def optional_float(value) -> Optional[float]:
+            if value is None:
+                return None
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        date_raw = raw.get("date")
+        parsed_date: Optional[datetime] = None
+        if isinstance(date_raw, str) and date_raw.strip():
+            try:
+                parsed_date = datetime.fromisoformat(date_raw)
+            except ValueError:
+                parsed_date = None
+
+        return MediaFile(
+            path=str(raw.get("path", "")),
+            filename=str(raw.get("filename", "")),
+            date=parsed_date,
+            latitude=optional_float(raw.get("latitude")),
+            longitude=optional_float(raw.get("longitude")),
+            altitude=optional_float(raw.get("altitude")),
+        )
+
+    def _save_results(self):
+        all_matches = self._all_matches()
+        if not all_matches:
+            messagebox.showinfo("Nothing to save", "There are no matched results to save yet.")
+            return
+
+        # On some macOS Tk builds (8.6.16), complex file filters can crash
+        # inside Tk's native bridge. Use safer dialog setup on macOS and normalize
+        # the saved extension in Python.
+        if os.name == "posix" and sys.platform == "darwin":
+            save_path = filedialog.asksaveasfilename(
+                title="Save scan results",
+                defaultextension=".json",
+                initialfile="geotagcopy-results.geotagcopy.json",
+            )
+        else:
+            save_path = filedialog.asksaveasfilename(
+                title="Save scan results",
+                defaultextension=".geotagcopy.json",
+                filetypes=[
+                    ("GeoTagCopy Results", "*.geotagcopy.json"),
+                    ("JSON files", "*.json"),
+                    ("All files", "*.*"),
+                ],
+            )
+        if not save_path:
+            return
+        if not save_path.lower().endswith(".geotagcopy.json"):
+            save_path = f"{save_path}.geotagcopy.json"
+
+        payload = {
+            "format": "geotagcopy-results-v1",
+            "saved_at": datetime.now().isoformat(timespec="seconds"),
+            "tagged_folder": self.tagged_var.get().strip(),
+            "untagged_folder": self.untagged_var.get().strip(),
+            "matches": [
+                {
+                    "untagged": self._media_to_dict(m.untagged),
+                    "donor": self._media_to_dict(m.donor),
+                    "time_diff_hours": m.time_diff_hours,
+                    "approved": m.approved,
+                }
+                for m in all_matches
+            ],
+        }
+
+        try:
+            with open(save_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2, ensure_ascii=True)
+            self._set_status(
+                f"Saved {len(all_matches)} matches to {os.path.basename(save_path)}",
+                1.0,
+            )
+            messagebox.showinfo("Saved", f"Saved {len(all_matches)} matches.")
+        except OSError as e:
+            messagebox.showerror("Save failed", f"Could not save results:\n{e}")
+
+    def _load_results(self):
+        if os.name == "posix" and sys.platform == "darwin":
+            load_path = filedialog.askopenfilename(title="Load scan results")
+        else:
+            load_path = filedialog.askopenfilename(
+                title="Load scan results",
+                filetypes=[
+                    ("GeoTagCopy Results", "*.geotagcopy.json"),
+                    ("JSON files", "*.json"),
+                    ("All files", "*.*"),
+                ],
+            )
+        if not load_path:
+            return
+
+        try:
+            with open(load_path, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            messagebox.showerror("Load failed", f"Could not read results file:\n{e}")
+            return
+
+        if payload.get("format") != "geotagcopy-results-v1":
+            messagebox.showerror(
+                "Unsupported file",
+                "This file is not a supported GeoTagCopy results export.",
+            )
+            return
+
+        raw_matches = payload.get("matches")
+        if not isinstance(raw_matches, list):
+            messagebox.showerror(
+                "Invalid file", "Results file does not contain a valid match list."
+            )
+            return
+
+        restored: list[GeoMatch] = []
+        for item in raw_matches:
+            if not isinstance(item, dict):
+                continue
+            untagged_raw = item.get("untagged")
+            donor_raw = item.get("donor")
+            if not isinstance(untagged_raw, dict) or not isinstance(donor_raw, dict):
+                continue
+
+            untagged = self._media_from_dict(untagged_raw)
+            donor = self._media_from_dict(donor_raw)
+            if not untagged.path or not donor.path:
+                continue
+
+            try:
+                time_diff = float(item.get("time_diff_hours", 0.0))
+            except (TypeError, ValueError):
+                time_diff = 0.0
+
+            restored.append(
+                GeoMatch(
+                    untagged=untagged,
+                    donor=donor,
+                    time_diff_hours=time_diff,
+                    approved=bool(item.get("approved", True)),
+                )
+            )
+
+        if not restored:
+            messagebox.showwarning("No data", "No valid matches were found in this file.")
+            return
+
+        tagged_folder = payload.get("tagged_folder")
+        untagged_folder = payload.get("untagged_folder")
+        if isinstance(tagged_folder, str):
+            self.tagged_var.set(tagged_folder)
+        if isinstance(untagged_folder, str):
+            self.untagged_var.set(untagged_folder)
+
+        self.groups = group_matches(restored)
+        self.current_page = 0
+        self._display_groups()
+
+        total_matches = len(restored)
+        self._set_status(
+            f"Loaded {total_matches} matches from {os.path.basename(load_path)}",
+            1.0,
+        )
+        messagebox.showinfo("Loaded", f"Loaded {total_matches} matched file(s).")
+
     # -- Apply tags ------------------------------------------------------
 
     def _apply_tags(self):
-        all_matches = []
-        for g in self.groups:
-            all_matches.extend(g.matches)
+        all_matches = self._all_matches()
 
         approved_count = sum(1 for m in all_matches if m.approved)
         if approved_count == 0:

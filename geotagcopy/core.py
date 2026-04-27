@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import sys
+from bisect import bisect_left
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -231,18 +232,22 @@ def read_metadata(
 
 
 def match_files(
-    tagged: list[MediaFile], untagged: list[MediaFile]
+    tagged: list[MediaFile],
+    untagged: list[MediaFile],
+    max_time_diff_hours: float = 24.0,
 ) -> list[GeoMatch]:
     """Match each untagged file to the nearest-in-time tagged file with GPS.
 
     Only tagged files that have both a date and GPS coordinates are considered.
     Untagged files that already have GPS or lack a date are skipped.
+    Matches exceeding *max_time_diff_hours* are discarded.
     """
     donors = [t for t in tagged if t.has_gps and t.date is not None]
     if not donors:
         return []
 
     donors_sorted = sorted(donors, key=lambda f: f.date)
+    donor_dates = [d.date for d in donors_sorted]
 
     matches: list[GeoMatch] = []
     for uf in untagged:
@@ -252,13 +257,20 @@ def match_files(
         best_donor = None
         best_diff = float("inf")
 
-        for d in donors_sorted:
+        insert_at = bisect_left(donor_dates, uf.date)
+        candidates = []
+        if insert_at > 0:
+            candidates.append(donors_sorted[insert_at - 1])
+        if insert_at < len(donors_sorted):
+            candidates.append(donors_sorted[insert_at])
+
+        for d in candidates:
             diff = abs((uf.date - d.date).total_seconds()) / 3600.0
             if diff < best_diff:
                 best_diff = diff
                 best_donor = d
 
-        if best_donor is not None:
+        if best_donor is not None and best_diff <= max_time_diff_hours:
             matches.append(
                 GeoMatch(
                     untagged=uf,
