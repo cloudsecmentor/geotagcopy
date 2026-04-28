@@ -13,6 +13,10 @@ Get the latest release for your platform:
 - **macOS**: [GeoTagCopy.app (zip)](https://github.com/cloudsecmentor/geotagcopy/releases/latest)
 - **Windows**: [GeoTagCopy app directory (zip)](https://github.com/cloudsecmentor/geotagcopy/releases/latest)
 
+> **macOS security note:** Current macOS builds are not Apple-notarized yet.
+> You might see a Gatekeeper warning on first launch. You can approve the app
+> manually in macOS security settings, or run GeoTagCopy from source.
+
 See [Releases](https://github.com/cloudsecmentor/geotagcopy/releases) for all versions.
 
 ## Support the Project
