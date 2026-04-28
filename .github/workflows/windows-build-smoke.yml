@@ -1,0 +1,90 @@
+name: Windows Build Smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/windows-build-smoke.yml"
+      - "assets/icon/**"
+      - "geotagcopy/**"
+      - "requirements*.txt"
+      - "scripts/**"
+      - "tests/**"
+      - "Makefile"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/windows-build-smoke.yml"
+      - "assets/icon/**"
+      - "geotagcopy/**"
+      - "requirements*.txt"
+      - "scripts/**"
+      - "tests/**"
+      - "Makefile"
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows artifacts
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r requirements-build.txt
+
+      - name: Run tests
+        run: python -m unittest discover -v
+
+      - name: Build Windows app and executable
+        run: python scripts/build_windows.py --target all
+
+      - name: Verify Windows outputs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $paths = @(
+            "dist\GeoTagCopy\GeoTagCopy.exe",
+            "dist\GeoTagCopy.exe"
+          )
+          foreach ($path in $paths) {
+            if (!(Test-Path $path)) {
+              throw "Expected build output not found: $path"
+            }
+          }
+
+          & "dist\GeoTagCopy\GeoTagCopy.exe" --help
+          if ($LASTEXITCODE -ne 0) {
+            throw "App directory executable --help failed with exit code $LASTEXITCODE"
+          }
+
+          & "dist\GeoTagCopy.exe" --help
+          if ($LASTEXITCODE -ne 0) {
+            throw "One-file executable --help failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Package Windows artifacts
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist\GeoTagCopy" -DestinationPath "dist\GeoTagCopy-windows-app.zip" -Force
+          Compress-Archive -Path "dist\GeoTagCopy.exe" -DestinationPath "dist\GeoTagCopy-windows-onefile.zip" -Force
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: geotagcopy-windows-smoke
+          path: |
+            dist/GeoTagCopy-windows-app.zip
+            dist/GeoTagCopy-windows-onefile.zip

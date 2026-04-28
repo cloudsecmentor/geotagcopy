@@ -41,7 +41,7 @@ from geotagcopy.core import (
     read_metadata,
     scan_folder,
 )
-from geotagcopy.donate import open_donate_page, should_show_donate
+from geotagcopy.support import open_support_page, should_show_support
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -131,20 +131,20 @@ class GeoTagCopyApp(ctk.CTk):
             text_color=("gray50", "gray60"),
         ).pack(anchor="w")
 
-        if should_show_donate():
+        if should_show_support():
             ctk.CTkButton(
                 header,
-                text="Donate",
+                text="Support",
                 width=96,
                 height=34,
-                command=open_donate_page,
+                command=open_support_page,
             ).grid(row=0, column=1, padx=(12, 0), sticky="e")
-            self._build_donate_menu()
+            self._build_support_menu()
 
-    def _build_donate_menu(self):
+    def _build_support_menu(self):
         menu_bar = tk.Menu(self)
         support_menu = tk.Menu(menu_bar, tearoff=False)
-        support_menu.add_command(label="Donate", command=open_donate_page)
+        support_menu.add_command(label="Support GeoTagCopy", command=open_support_page)
         menu_bar.add_cascade(label="Support", menu=support_menu)
         self.configure(menu=menu_bar)
 

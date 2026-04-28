@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build macOS GeoTagCopy artifacts with PyInstaller."""
+"""Build Windows GeoTagCopy artifacts with PyInstaller."""
 
 from __future__ import annotations
 
@@ -15,29 +15,28 @@ from _build_common import (
     APP_NAME,
     ENTRYPOINT,
     EXIFTOOL_VERSION,
+    ICON_ICO,
     PROJECT_ROOT,
     base_pyinstaller_command,
     download_file,
     pyinstaller_available,
-    safe_extract_tar,
+    safe_extract_zip,
     verify_sha256,
     write_build_info,
 )
 
-BUNDLE_IDENTIFIER = "com.geotagcopy.app"
-VENDORED_EXIFTOOL = PROJECT_ROOT / "vendor" / "exiftool"
-EXIFTOOL_ARCHIVE_NAME = f"Image-ExifTool-{EXIFTOOL_VERSION}.tar.gz"
-EXIFTOOL_ARCHIVE_URL = (
-    f"https://sourceforge.net/projects/exiftool/files/{EXIFTOOL_ARCHIVE_NAME}/download"
-)
+
+VENDORED_EXIFTOOL = PROJECT_ROOT / "vendor" / "exiftool-windows"
+EXIFTOOL_ARCHIVE_NAME = f"exiftool-{EXIFTOOL_VERSION}_64.zip"
+EXIFTOOL_ARCHIVE_URL = f"https://exiftool.org/{EXIFTOOL_ARCHIVE_NAME}"
 EXIFTOOL_ARCHIVE_SHA256 = (
-    "58f74f5cf84350693a00c4df236fd4810e5abaf25fab2d15eaa9dcc4872d4481"
+    "2e59d9de0cd520394e8f64b05592a1a1617991108f8c1c5074aec294ae548351"
 )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Build GeoTagCopy as a macOS .app bundle or one-file executable."
+        description="Build GeoTagCopy as a Windows app directory or one-file executable."
     )
     parser.add_argument(
         "--target",
@@ -57,21 +56,25 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if platform.system() != "Darwin":
-        print("This builder must run on macOS to produce macOS artifacts.", file=sys.stderr)
+    if platform.system() != "Windows":
+        print("This builder must run on Windows to produce Windows artifacts.", file=sys.stderr)
         return 2
 
     if not pyinstaller_available():
         print(
-            "PyInstaller is not installed. Run: python3 -m pip install -r requirements-build.txt",
+            "PyInstaller is not installed. Run: python -m pip install -r requirements-build.txt",
             file=sys.stderr,
         )
+        return 2
+
+    if not ICON_ICO.is_file():
+        print("Windows icon not found. Run: make icons", file=sys.stderr)
         return 2
 
     if not args.no_bundle_exiftool:
         _ensure_vendored_exiftool()
 
-    write_build_info("scripts/build_macos.py")
+    write_build_info("scripts/build_windows.py")
 
     targets = ("app", "onefile") if args.target == "all" else (args.target,)
     for target in targets:
@@ -83,18 +86,18 @@ def main() -> int:
 
 def _run_pyinstaller(target: str, clean: bool) -> None:
     cmd = base_pyinstaller_command()
-    cmd.extend(["--osx-bundle-identifier", BUNDLE_IDENTIFIER])
+    cmd.extend(["--icon", str(ICON_ICO)])
 
     if clean:
         cmd.append("--clean")
 
     if _has_vendored_exiftool():
-        cmd.extend(["--add-data", f"{VENDORED_EXIFTOOL}:exiftool"])
+        cmd.extend(["--add-data", f"{VENDORED_EXIFTOOL};exiftool"])
 
     if target == "app":
         cmd.extend(["--windowed", "--onedir"])
     elif target == "onefile":
-        cmd.append("--onefile")
+        cmd.extend(["--windowed", "--onefile"])
     else:
         raise ValueError(f"Unsupported target: {target}")
 
@@ -105,15 +108,18 @@ def _run_pyinstaller(target: str, clean: bool) -> None:
 
 
 def _has_vendored_exiftool() -> bool:
-    return (VENDORED_EXIFTOOL / "exiftool").is_file()
+    return (
+        (VENDORED_EXIFTOOL / "exiftool.exe").is_file()
+        and (VENDORED_EXIFTOOL / "exiftool_files").is_dir()
+    )
 
 
 def _ensure_vendored_exiftool() -> None:
-    if _has_vendored_exiftool() and (VENDORED_EXIFTOOL / "lib").is_dir():
+    if _has_vendored_exiftool():
         print(f"Using bundled ExifTool from {VENDORED_EXIFTOOL}")
         return
 
-    print(f"Downloading ExifTool {EXIFTOOL_VERSION} for app bundling...")
+    print(f"Downloading ExifTool {EXIFTOOL_VERSION} for Windows app bundling...")
     VENDORED_EXIFTOOL.parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -124,17 +130,18 @@ def _ensure_vendored_exiftool() -> None:
 
         extract_root = tmp_path / "extract"
         extract_root.mkdir()
-        safe_extract_tar(archive_path, extract_root)
+        safe_extract_zip(archive_path, extract_root)
 
-        source = extract_root / f"Image-ExifTool-{EXIFTOOL_VERSION}"
-        if not (source / "exiftool").is_file() or not (source / "lib").is_dir():
+        source = extract_root / f"exiftool-{EXIFTOOL_VERSION}_64"
+        source_exe = source / "exiftool(-k).exe"
+        source_files = source / "exiftool_files"
+        if not source_exe.is_file() or not source_files.is_dir():
             raise RuntimeError(f"Unexpected ExifTool archive layout in {source}")
 
         shutil.rmtree(VENDORED_EXIFTOOL, ignore_errors=True)
         VENDORED_EXIFTOOL.mkdir(parents=True)
-        shutil.copy2(source / "exiftool", VENDORED_EXIFTOOL / "exiftool")
-        shutil.copytree(source / "lib", VENDORED_EXIFTOOL / "lib")
-        (VENDORED_EXIFTOOL / "exiftool").chmod(0o755)
+        shutil.copy2(source_exe, VENDORED_EXIFTOOL / "exiftool.exe")
+        shutil.copytree(source_files, VENDORED_EXIFTOOL / "exiftool_files")
 
     print(f"Vendored ExifTool installed at {VENDORED_EXIFTOOL}")
 
@@ -142,9 +149,9 @@ def _ensure_vendored_exiftool() -> None:
 def _print_artifacts(targets: tuple[str, ...]) -> None:
     print("\nBuild complete.")
     if "app" in targets:
-        print(f"- App bundle: {PROJECT_ROOT / 'dist' / (APP_NAME + '.app')}")
+        print(f"- App directory: {PROJECT_ROOT / 'dist' / APP_NAME}")
     if "onefile" in targets:
-        print(f"- Single executable: {PROJECT_ROOT / 'dist' / APP_NAME}")
+        print(f"- Single executable: {PROJECT_ROOT / 'dist' / (APP_NAME + '.exe')}")
 
 
 if __name__ == "__main__":

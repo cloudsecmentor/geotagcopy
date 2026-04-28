@@ -164,6 +164,22 @@ class TestExifToolLookup(unittest.TestCase):
                             os.path.realpath(exiftool),
                         )
 
+    def test_finds_bundled_exiftool_exe_in_windows_bundle(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            exiftool = os.path.join(tmpdir, "exiftool", "exiftool.exe")
+            os.makedirs(os.path.dirname(exiftool))
+            with open(exiftool, "w", encoding="utf-8") as f:
+                f.write("")
+            os.chmod(exiftool, 0o755)
+
+            with patch.dict(os.environ, {"GEOTAGCOPY_EXIFTOOL": ""}):
+                with patch("geotagcopy.core.sys._MEIPASS", tmpdir, create=True):
+                    with patch("geotagcopy.core.shutil.which", return_value=None):
+                        self.assertEqual(
+                            os.path.realpath(get_exiftool_exe()),
+                            os.path.realpath(exiftool),
+                        )
+
 
 class TestParseExifDate(unittest.TestCase):
     def test_standard_format(self):

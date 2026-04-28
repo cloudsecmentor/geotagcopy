@@ -140,94 +140,90 @@ the selected Python interpreter to have dependencies from `requirements.txt`.
 
 ---
 
-## Task 3 — Donate UI in the packaged app (Stripe payment link)
+## Task 3 — Support link in the packaged app (site-first donation flow)
 
 - [ ] **Status:** in progress
 - **Depends on:** Task 1 (license clarity), Task 2 (optional, for the donate
   icon)
 - **Acceptance criteria:**
   - The **packaged** build (PyInstaller `--onedir` or `--onefile`, detected
-    via `getattr(sys, "frozen", False)`) shows a clearly visible **Donate**
+    via `getattr(sys, "frozen", False)`) shows a clearly visible **Support**
     button in the top-right of the main window.
   - When run from source (`python -m geotagcopy`) the button is hidden by
-    default but can be force-enabled with `GEOTAGCOPY_SHOW_DONATE=1` so it's
+    default but can be force-enabled with `GEOTAGCOPY_SHOW_SUPPORT=1` so it's
     testable.
-  - Clicking the button opens the configured Stripe Payment Link in the
-    user's default browser (uses the existing `webbrowser.open` pattern in
-    `app.py`).
-  - The Stripe Payment Link URL is **not** secret (Stripe Payment Links are
-    public hosted URLs), but it is read from a single constant
-    `geotagcopy.donate.STRIPE_PAYMENT_LINK`. The constant has a sensible
-    default (the production link) and can be overridden at build time via the
-    `GEOTAGCOPY_STRIPE_PAYMENT_LINK` environment variable, which the
+  - Clicking the button opens the configured geotagcopy support/download
+    page in the user's default browser. The app does **not** link directly to
+    Stripe; the website owns the Stripe Payment Link.
+  - The support URL is read from a single constant
+    `geotagcopy.support.SUPPORT_URL`. The constant has a sensible default
+    (empty until the production site URL exists) and can be overridden at build
+    time via the `GEOTAGCOPY_SUPPORT_URL` environment variable, which the
     PyInstaller build step bakes into a generated `geotagcopy/_build_info.py`.
-  - A "Donate" item also appears in the macOS menu bar (under the app menu)
-    and a Windows tray-equivalent menu (just the main-window button is fine
-    on Windows).
+  - A "Support GeoTagCopy" item also appears in the macOS menu bar (under the
+    app menu) and a Windows tray-equivalent menu (just the main-window button
+    is fine on Windows).
 
-**Progress:** Added `geotagcopy/donate.py`, the header Donate button, a Support
-menu Donate item, macOS `_build_info.py` generation from
-`GEOTAGCOPY_STRIPE_PAYMENT_LINK`, `.gitignore` coverage for generated build
-info, and `tests/test_donate.py`. `make test` passes. Remaining work before
-completion: wire the same build-info generation into `scripts/build_windows.py`
-when Task 4 creates it, pass `vars.STRIPE_PAYMENT_LINK` in the release workflow
-in Task 5, and manually smoke-check the GUI with a real or example Stripe link.
+**Progress:** Added `geotagcopy/support.py`, the header Support button, a
+Support menu item, macOS `_build_info.py` generation from
+`GEOTAGCOPY_SUPPORT_URL`, `.gitignore` coverage for generated build info, and
+`tests/test_support.py`. `make test` passes. Remaining work before completion:
+wire the same build-info generation into `scripts/build_windows.py` when Task 4
+creates it, pass `vars.SUPPORT_URL` in the release workflow in Task 5, and
+manually smoke-check the GUI with a real or example support-site URL.
 
 ### Detailed instructions
 
-1. Add a new module `geotagcopy/donate.py` containing:
+1. Add a new module `geotagcopy/support.py` containing:
    ```python
    import os
    import sys
    import webbrowser
 
-   STRIPE_PAYMENT_LINK = os.environ.get(
-       "GEOTAGCOPY_STRIPE_PAYMENT_LINK",
+   SUPPORT_URL = os.environ.get(
+       "GEOTAGCOPY_SUPPORT_URL",
        "",  # filled in by build pipeline; empty in dev source tree
    )
 
    def is_packaged() -> bool:
        return bool(getattr(sys, "frozen", False))
 
-   def should_show_donate() -> bool:
-       if os.environ.get("GEOTAGCOPY_SHOW_DONATE") == "1":
+   def should_show_support() -> bool:
+       if os.environ.get("GEOTAGCOPY_SHOW_SUPPORT") == "1":
            return True
-       return is_packaged() and bool(STRIPE_PAYMENT_LINK)
+       return is_packaged() and bool(SUPPORT_URL)
 
-   def open_donate_page() -> None:
-       if STRIPE_PAYMENT_LINK:
-           webbrowser.open(STRIPE_PAYMENT_LINK)
+   def open_support_page() -> None:
+       if SUPPORT_URL:
+           webbrowser.open(SUPPORT_URL)
    ```
-2. In `geotagcopy/app.py`, add a `CTkButton` labeled "♥ Donate" (no emoji —
-   use plain text "Donate") in the existing top header row. Place it after
-   the existing right-aligned widgets. Wire `command=open_donate_page`. Hide
-   the button when `should_show_donate()` is False (do not even create it).
+2. In `geotagcopy/app.py`, add a `CTkButton` labeled "Support" in the existing
+   top header row. Place it after the existing right-aligned widgets. Wire
+   `command=open_support_page`. Hide the button when `should_show_support()`
+   is False (do not even create it).
 3. Update `scripts/build_macos.py` and the new `scripts/build_windows.py`
    (Task 4) to write `geotagcopy/_build_info.py` containing
-   `STRIPE_PAYMENT_LINK = "<env value>"` if `GEOTAGCOPY_STRIPE_PAYMENT_LINK`
-   is set in the build environment, then `donate.py` imports from it and
-   prefers it over the env var. Treat the file as build artifact: add it to
-   `.gitignore`.
-4. The Stripe Payment Link itself is **provided by the user**. The agent must
-   not invent one. Until the user provides it, leave the default empty and
-   note in the Outcome that the donate button will be hidden until
-   `GEOTAGCOPY_STRIPE_PAYMENT_LINK` is configured in the GitHub repo as
-   either a repository **variable** (preferred — it's public anyway) named
-   `STRIPE_PAYMENT_LINK` or a secret.
+   `SUPPORT_URL = "<env value>"` if `GEOTAGCOPY_SUPPORT_URL` is set in the
+   build environment, then `support.py` imports from it and prefers it over
+   the env var. Treat the file as build artifact: add it to `.gitignore`.
+4. The support URL itself is **provided by the user** after the static website
+   URL or custom domain exists. The agent must not invent one. Until the user
+   provides it, leave the default empty and note in the Outcome that the
+   support button will be hidden until `GEOTAGCOPY_SUPPORT_URL` is configured
+   in the GitHub repo as a repository **variable** named `SUPPORT_URL`.
 5. Update both build workflows (Task 5) to pass
-   `GEOTAGCOPY_STRIPE_PAYMENT_LINK: ${{ vars.STRIPE_PAYMENT_LINK }}` to the
-   build step.
-6. Add a unit test `tests/test_donate.py` covering `should_show_donate()`
-   under all four (frozen, link set/empty) combinations using monkeypatch.
-7. Smoke-check: `GEOTAGCOPY_SHOW_DONATE=1 GEOTAGCOPY_STRIPE_PAYMENT_LINK=https://example.com python -m geotagcopy`,
-   confirm the button appears.
+   `GEOTAGCOPY_SUPPORT_URL: ${{ vars.SUPPORT_URL }}` to the build step.
+6. Add a unit test `tests/test_support.py` covering `should_show_support()`
+   under all four (frozen, URL set/empty) combinations using monkeypatch.
+7. Smoke-check: `GEOTAGCOPY_SHOW_SUPPORT=1 GEOTAGCOPY_SUPPORT_URL=https://example.com python -m geotagcopy`,
+   confirm the button appears and opens the support URL.
 
 ---
 
 ## Task 4 — Windows build (Python-based, PyInstaller)
 
-- [ ] **Status:** not started
-- **Depends on:** Task 2 (for `icon.ico`), Task 3 (for donate wiring)
+- [ ] **Status:** implemented; awaiting Windows runner smoke test
+- **Depends on:** Task 2 (for `icon.ico`), Task 3 (for support-link wiring)
 - **Acceptance criteria:**
   - A new `scripts/build_windows.py` mirrors `scripts/build_macos.py` but
     targets Windows: produces both `dist\GeoTagCopy\GeoTagCopy.exe`
@@ -241,6 +237,22 @@ in Task 5, and manually smoke-check the GUI with a real or example Stripe link.
   - `geotagcopy/core.py`'s `check_exiftool()` resolves the bundled
     `exiftool.exe` on Windows the same way it resolves the bundled binary on
     macOS today.
+
+**Progress:** Added `scripts/_build_common.py`, refactored
+`scripts/build_macos.py` onto shared helpers, added `scripts/build_windows.py`
+with pinned ExifTool `13.57` Windows archive SHA-256, wired
+`GEOTAGCOPY_SUPPORT_URL` into generated `_build_info.py`, added
+`make build-windows`, `make build-windows-app`, and `make
+build-windows-onefile`, updated bundled ExifTool lookup for
+`exiftool/exiftool.exe`, added a Windows bundle lookup test, and documented
+Windows builds in `README.md`. Verified `python3 -m py_compile
+scripts/_build_common.py scripts/build_macos.py scripts/build_windows.py`,
+`python3 scripts/build_windows.py --help`, macOS platform guard behavior, and
+`make test` (56 tests). Added `.github/workflows/windows-build-smoke.yml` to
+run the same checks on `windows-latest`, build both Windows artifacts, verify
+both executable paths, run `--help` on each executable, and upload zipped
+artifacts. Remaining verification: push this workflow to GitHub and confirm the
+`Windows Build Smoke` run is green.
 
 ### Detailed instructions
 
@@ -321,7 +333,10 @@ Document these in `CONTRIBUTING.md` under "Maintainer setup":
   created on the runner (any non-empty string).
 
 Repo **variable** (not secret):
-- `STRIPE_PAYMENT_LINK` — the public Stripe Payment Link URL.
+- `SUPPORT_URL` — the public geotagcopy support/download page opened from
+  the packaged app.
+- `STRIPE_PAYMENT_LINK` — the public Stripe Payment Link URL used by the
+  website only.
 
 ### Detailed instructions
 
@@ -423,7 +438,7 @@ Repo **variable** (not secret):
            python -m pip install -r requirements.txt -r requirements-build.txt
        - run: python -m unittest discover -v
        - env:
-           GEOTAGCOPY_STRIPE_PAYMENT_LINK: ${{ vars.STRIPE_PAYMENT_LINK }}
+          GEOTAGCOPY_SUPPORT_URL: ${{ vars.SUPPORT_URL }}
          run: python scripts/build_windows.py --target all
        - name: Package
          shell: pwsh
@@ -457,21 +472,21 @@ Repo **variable** (not secret):
 
 ---
 
-## Task 6 — `iGeoTagDonor` static landing page (starter)
+## Task 6 — `geotagcopy` static landing page (starter)
 
 - [ ] **Status:** not started
-- **Depends on:** Task 2 (for favicon), Task 3 (for the same Stripe link)
+- **Depends on:** Task 2 (for favicon), Task 3 (for app-to-site support flow)
 - **Acceptance criteria:**
   - A new top-level directory `site/` contains a fully static, dependency-free
     site (HTML + CSS + a tiny vanilla-JS file). No build step needed; it can
     be served by `python -m http.server` directly from `site/`.
-  - The site is named **iGeoTagDonor**, has the GeoTagCopy favicon, and has:
+  - The site is named **geotagcopy**, has the GeoTagCopy favicon, and has:
     - A hero section explaining what GeoTagCopy is.
     - A "Download" section with **dynamic** macOS and Windows download
       buttons populated from `latest.json` (see Task 8).
     - A "Donate" section with a prominent button linking to the Stripe
-      Payment Link (same URL as the in-app one — read from a `<meta>` tag or
-      a `config.js` so it can be templated by the deploy workflow).
+      Payment Link. This Stripe URL lives on the site only; the packaged app
+      links to this site instead of linking directly to Stripe.
     - A "Source" link to the GitHub repo.
     - A short "How it works" section (3 bullets, mirroring the README's
       "How It Works").
@@ -569,11 +584,12 @@ site/
 ### Required GitHub configuration
 
 Repo **variables** (public):
-- `AZURE_STORAGE_ACCOUNT` — e.g. `igeotagdonor`.
-- `AZURE_RESOURCE_GROUP` — e.g. `igeotagdonor-rg`.
+- `AZURE_STORAGE_ACCOUNT` — e.g. `geotagcopy`.
+- `AZURE_RESOURCE_GROUP` — e.g. `geotagcopy-rg`.
 - `AZURE_CDN_PROFILE` (optional) — Front Door / CDN profile name.
 - `AZURE_CDN_ENDPOINT` (optional) — endpoint name.
-- `STRIPE_PAYMENT_LINK` — same as Task 5.
+- `STRIPE_PAYMENT_LINK` — public Stripe Payment Link used by the website
+  Donate button.
 
 Repo **secrets** (one of these strategies):
 - **OIDC (recommended):**
@@ -724,8 +740,8 @@ account (and `CDN Endpoint Contributor` if CDN is used).
 - **Acceptance criteria:**
   - `README.md` has badges (CI status, license, latest release).
   - "Download" section at the top of `README.md` linking to the latest
-    GitHub release **and** to the iGeoTagDonor site.
-  - "Support the project" section linking to the Stripe Payment Link.
+    GitHub release **and** to the geotagcopy site.
+  - "Support the project" section linking to the geotagcopy support page.
   - The `Legacy Pipeline` and `Similar Projects` sections are preserved.
   - All "TODO/placeholder" notes added by previous tasks (contact emails,
     user name, Stripe URL) are resolved or explicitly listed in a final
@@ -741,9 +757,10 @@ account (and `CDN Endpoint Contributor` if CDN is used).
    ```
 2. Add a "Download" section directly under the badges with macOS and Windows
    bullet links to `https://github.com/<owner>/<repo>/releases/latest` and
-   the iGeoTagDonor URL.
-3. Add a "Support the project" section linking to the Stripe Payment Link
-   (read it from the same place — `vars.STRIPE_PAYMENT_LINK`).
+   the geotagcopy URL.
+3. Add a "Support the project" section linking to the geotagcopy support page
+   (read it from the same place — `vars.SUPPORT_URL`). The support page then
+   links to Stripe.
 4. Replace any references to the old PolyForm license.
 5. Remove the legacy "macOS App Builds" build instructions from the README
    only if they are now duplicated in `CONTRIBUTING.md`; otherwise keep
@@ -764,7 +781,7 @@ account (and `CDN Endpoint Contributor` if CDN is used).
   - GitHub Release contains all four artifacts.
   - `latest.json` on the website points at the v0.1.0 assets.
   - The site loads at the public Azure URL with working Donate and Download
-    buttons.
+    buttons, and packaged apps open the support page rather than Stripe.
 
 ### Detailed instructions
 
@@ -774,12 +791,12 @@ account (and `CDN Endpoint Contributor` if CDN is used).
 2. Watch the workflow run; if any signing/notarization step fails, do
    **not** silently fall through — fix forward and re-tag with `v0.1.1`.
 3. Once green, manually verify each artifact:
-   - macOS `.app`: download, unzip, drag to Applications, launch from
-     Finder. Must not show Gatekeeper warning. Donate button must open the
-     Stripe link.
+  - macOS `.app`: download, unzip, drag to Applications, launch from
+    Finder. Must not show Gatekeeper warning. Support button must open the
+    geotagcopy support page.
    - Windows `.exe`: download on a Windows machine or VM, unzip, run.
-     Donate button must open the Stripe link.
-4. Visit the iGeoTagDonor site, confirm version matches and downloads
+    Support button must open the geotagcopy support page.
+4. Visit the geotagcopy site, confirm version matches and downloads
    resolve.
 5. Tick this task and update the Outstanding human decisions section.
 
@@ -795,19 +812,22 @@ Task 1, Task 5, Task 7, and Task 10:
 - [ ] **Copyright holder name** for `LICENSE` and `README.md`. Current
   implementation uses `GeoTagCopy contributors`; confirm before release.
 - [ ] **Security contact email** for `SECURITY.md`. Current implementation uses
-  `security@igeotagdonor.example`; replace before release.
+  `security@geotagcopy.example`; replace before release.
 - [ ] **Code of Conduct contact email** for `CODE_OF_CONDUCT.md`. Current
-  implementation uses `conduct@igeotagdonor.example`; replace before release.
+  implementation uses `conduct@geotagcopy.example`; replace before release.
 - [ ] **Stripe Payment Link URL** (must be a real
-  `https://buy.stripe.com/...` or `https://donate.stripe.com/...` URL).
+  `https://buy.stripe.com/...` or `https://donate.stripe.com/...` URL) for
+  the website Donate button only.
+- [ ] **Support URL** for the packaged app to open (geotagcopy homepage or
+  support section/page), exposed as repo variable `SUPPORT_URL`.
 - [ ] **Apple Developer Team ID** + the `.p12` Developer ID Application
   certificate + its export password.
 - [ ] **App Store Connect API key** (`.p8` file, key ID, issuer ID) for
   notarization.
 - [ ] **Azure subscription, resource group, and storage account name** for
-  iGeoTagDonor; whether to use OIDC federated credentials (recommended) or
+  geotagcopy; whether to use OIDC federated credentials (recommended) or
   `AZURE_CREDENTIALS`.
-- [ ] **Custom domain** for iGeoTagDonor (e.g. `igeotagdonor.com`) — if any —
+- [ ] **Custom domain** for geotagcopy (e.g. `geotagcopy.com`) — if any —
   and whether Azure CDN / Front Door is in front of the storage account.
 - [ ] **Repo public URL** (the `<owner>/<repo>` slug) once the repo is made
   public, so README badges and `latest.json` links can be finalized.

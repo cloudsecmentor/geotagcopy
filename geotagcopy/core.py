@@ -54,7 +54,9 @@ def _bundled_exiftool_candidates() -> list[Path]:
 def _exiftool_locations(root: Path) -> list[Path]:
     return [
         root / "exiftool" / "exiftool",
+        root / "exiftool" / "exiftool.exe",
         root / "bin" / "exiftool",
+        root / "bin" / "exiftool.exe",
     ]
 
 

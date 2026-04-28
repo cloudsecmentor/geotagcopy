@@ -86,13 +86,46 @@ Build both outputs:
 make build-macos
 ```
 
+## Windows App Builds
+
+GeoTagCopy can also be packaged on Windows with PyInstaller from the same
+Python codebase.
+
+Install build dependencies:
+
+```powershell
+make build-deps
+```
+
+Build an app directory:
+
+```powershell
+make build-windows-app
+```
+
+The executable will be created at `dist\GeoTagCopy\GeoTagCopy.exe`.
+
+Build a single executable file:
+
+```powershell
+make build-windows-onefile
+```
+
+The executable will be created at `dist\GeoTagCopy.exe`.
+
+Build both outputs:
+
+```powershell
+make build-windows
+```
+
 ### Bundling ExifTool
 
 ExifTool is still required for reading and writing metadata. Packaged builds
 automatically download a pinned ExifTool release into `vendor/exiftool/` before
-running PyInstaller, then include it in the app bundle and one-file executable.
-This makes `GeoTagCopy.app` work when launched from Finder without relying on a
-Terminal `PATH`.
+on macOS and `vendor/exiftool-windows/` on Windows before running PyInstaller,
+then include it in the app bundle, app directory, and one-file executable. This
+makes packaged builds work without relying on a Terminal or PowerShell `PATH`.
 
 If you need to supply ExifTool manually, place the executable distribution here
 before building:
