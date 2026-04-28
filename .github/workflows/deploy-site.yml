@@ -47,23 +47,36 @@ jobs:
       - name: Prepare site assets
         run: python scripts/copy_site_assets.py
 
-      - name: Template site config
+      - name: Template site files
         run: |
           python - <<'PY'
           import os
           import json
           from pathlib import Path
 
-          config = Path("site/config.js")
           repo_variables = json.loads(os.environ.get("REPO_VARIABLES_JSON", "{}"))
           stripe_link = os.environ.get("STRIPE_DONATE_LINK", "") or repo_variables.get("STRIPE_PAYMENT_LINK", "")
-          config.write_text(
-              config.read_text(encoding="utf-8").replace(
-                  "__STRIPE_PAYMENT_LINK__",
-                  stripe_link,
-              ),
-              encoding="utf-8",
-          )
+          site_url = (
+              os.environ.get("SUPPORT_URL", "")
+              or repo_variables.get("SITE_URL", "")
+              or repo_variables.get("SUPPORT_URL", "")
+          ).rstrip("/")
+
+          if not site_url:
+              raise SystemExit("SUPPORT_URL or SITE_URL variable is required for SEO metadata")
+
+          replacements = {
+              "__STRIPE_PAYMENT_LINK__": stripe_link,
+              "__SITE_URL__": site_url,
+          }
+
+          for path in Path("site").rglob("*"):
+              if path.suffix.lower() not in {".html", ".js", ".txt", ".xml"}:
+                  continue
+              text = path.read_text(encoding="utf-8")
+              for token, value in replacements.items():
+                  text = text.replace(token, value)
+              path.write_text(text, encoding="utf-8")
           PY
 
       - name: Validate Azure configuration

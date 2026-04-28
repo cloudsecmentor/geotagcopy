@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Copy GPS from iPhone Photos to Camera Photos - GeoTagCopy</title>
+    <meta
+      name="description"
+      content="Use GeoTagCopy to copy GPS coordinates from geotagged iPhone photos to untagged DSLR or mirrorless camera photos by timestamp. Local desktop workflow, no GPX tracklog required."
+    >
+    <link rel="canonical" href="__SITE_URL__/copy-gps-from-iphone-photos.html">
+    <meta property="og:title" content="Copy GPS from iPhone Photos to Camera Photos">
+    <meta
+      property="og:description"
+      content="A local desktop workflow for using iPhone photos as GPS reference images for camera files."
+    >
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="__SITE_URL__/copy-gps-from-iphone-photos.html">
+    <meta property="og:image" content="__SITE_URL__/assets/icon.png">
+    <link rel="icon" href="assets/favicon.ico">
+    <link rel="apple-touch-icon" href="assets/icon.png">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="GeoTagCopy home">
+        <img src="assets/favicon-32.png" width="32" height="32" alt="">
+        <span>GeoTagCopy</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="index.html#download">Download</a>
+        <a href="index.html#workflow">Workflow</a>
+        <a href="index.html#compare">Compare</a>
+        <a href="https://github.com/cloudsecmentor/geotagcopy">Source</a>
+      </nav>
+    </header>
+
+    <main>
+      <article class="content-page">
+        <p class="eyebrow">Phone GPS reference workflow</p>
+        <h1>Copy GPS from iPhone photos to camera photos</h1>
+        <p class="lead">
+          If your iPhone captured location but your DSLR or mirrorless camera did
+          not, GeoTagCopy can use the iPhone photos as GPS donors for nearby
+          camera photos from the same trip or shoot.
+        </p>
+
+        <h2>When this works well</h2>
+        <p>
+          This workflow is strongest when you took occasional iPhone photos in
+          the same places where you used your camera. GeoTagCopy reads timestamps,
+          finds nearby untagged photos, and lets you review the matches before it
+          writes metadata.
+        </p>
+
+        <h2>Why not use a GPX file?</h2>
+        <p>
+          GPX tracklogs are useful, but they require planning ahead. GeoTagCopy
+          is aimed at the common after-the-fact problem: your phone photos already
+          have GPS, your camera photos do not, and you want a local desktop tool
+          that can bridge the two.
+        </p>
+
+        <h2>Basic steps</h2>
+        <ol class="steps">
+          <li><strong>Select iPhone photos.</strong> Pick the folder that contains geotagged reference images.</li>
+          <li><strong>Select camera photos.</strong> Pick the folder with untagged JPG, HEIC, or RAW-derived files.</li>
+          <li><strong>Review matches.</strong> Check the timestamp and location groups before applying tags.</li>
+          <li><strong>Write GPS locally.</strong> GeoTagCopy uses ExifTool to write the coordinates.</li>
+        </ol>
+
+        <p class="page-cta">
+          <a class="button primary" href="index.html#download">Download GeoTagCopy</a>
+        </p>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <p><a href="index.html">GeoTagCopy</a> is a local desktop app for phone-to-camera GPS copy workflows.</p>
+      <p><a href="houdahgeo-alternative.html">HoudahGeo alternative</a></p>
+    </footer>
+  </body>
+</html>

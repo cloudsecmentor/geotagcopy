@@ -3,23 +3,84 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GeoTagCopy - GPS Tag Copy Utility</title>
+    <title>GeoTagCopy - Copy GPS from Phone Photos to Camera Photos</title>
     <meta
       name="description"
-      content="Copy GPS coordinates from geotagged photos to camera photos by matching the closest timestamps."
+      content="GeoTagCopy is a local desktop app that copies GPS coordinates from geotagged iPhone or Android photos to untagged camera photos by timestamp. No GPX tracklog or flaky Bluetooth sync required."
     >
-    <meta property="og:title" content="GeoTagCopy">
+    <link rel="canonical" href="__SITE_URL__/">
+    <meta property="og:title" content="GeoTagCopy - Copy GPS from Phone Photos to Camera Photos">
     <meta
       property="og:description"
-      content="A donation-supported desktop app for copying GPS tags from phone photos to camera photos."
+      content="Use phone photos as GPS references for Sony, Canon, Nikon, Fujifilm, and other camera photos. Preview matches locally, then write coordinates with ExifTool."
     >
     <meta property="og:type" content="website">
-    <meta property="og:image" content="assets/icon.png">
+    <meta property="og:url" content="__SITE_URL__/">
+    <meta property="og:image" content="__SITE_URL__/assets/icon.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="GeoTagCopy - Copy GPS from Phone Photos to Camera Photos">
+    <meta
+      name="twitter:description"
+      content="Local desktop geotagging for hybrid camera-and-phone workflows. Copy phone GPS to camera files in minutes."
+    >
+    <meta name="twitter:image" content="__SITE_URL__/assets/icon.png">
     <link rel="icon" href="assets/favicon.ico">
     <link rel="apple-touch-icon" href="assets/icon.png">
     <link rel="stylesheet" href="styles.css">
     <script src="config.js" defer></script>
     <script src="app.js" defer></script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "GeoTagCopy",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "macOS, Windows",
+        "description": "Local desktop app for copying GPS coordinates from geotagged phone photos to untagged camera photos by timestamp.",
+        "url": "__SITE_URL__/",
+        "downloadUrl": "__SITE_URL__/#download",
+        "image": "__SITE_URL__/assets/icon.png",
+        "codeRepository": "https://github.com/cloudsecmentor/geotagcopy",
+        "license": "https://github.com/cloudsecmentor/geotagcopy/blob/main/LICENSE",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Can GeoTagCopy copy GPS from iPhone photos to camera photos?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. GeoTagCopy uses geotagged iPhone or Android photos as reference images, matches nearby camera photos by timestamp, and writes GPS coordinates after you review the matches."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need a GPX tracklog?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. GeoTagCopy is designed for reference-photo workflows where your phone photos already contain location metadata."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does GeoTagCopy upload my photos?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. GeoTagCopy runs locally on your desktop and writes metadata with ExifTool."
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <header class="site-header">
@@ -29,8 +90,9 @@
       </a>
       <nav aria-label="Primary navigation">
         <a href="#download">Download</a>
-        <a href="#donate">Donate</a>
-        <a href="#how-it-works">How it works</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#compare">Compare</a>
+        <a href="#faq">FAQ</a>
         <a data-repo-link href="https://github.com/cloudsecmentor/geotagcopy">Source</a>
       </nav>
     </header>
@@ -38,51 +100,53 @@
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Donation-supported open source desktop app</p>
-          <h1 id="hero-title">Copy GPS tags from phone photos to camera photos.</h1>
+          <p class="eyebrow">Local desktop geotagging</p>
+          <h1 id="hero-title">Copy phone GPS to camera photos in minutes.</h1>
           <p class="hero-text">
-            GeoTagCopy matches your untagged camera photos with geotagged phone
-            photos by timestamp, then writes the GPS coordinates with ExifTool.
+            GeoTagCopy matches geotagged iPhone or Android reference photos with
+            untagged Sony, Canon, Nikon, Fujifilm, and other camera photos by
+            timestamp. Preview the matches locally, then write GPS coordinates
+            with ExifTool.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="#download">Download latest</a>
-            <a class="button secondary" href="#donate">Support the project</a>
+            <a class="button secondary" href="#workflow">See workflow</a>
           </div>
         </div>
-        <div class="hero-card" aria-label="GeoTagCopy summary">
+        <figure class="hero-visual" aria-label="GeoTagCopy reference photo workflow">
           <img class="app-icon" src="assets/icon.png" width="160" height="160" alt="GeoTagCopy map pin icon">
-          <ul>
-            <li>Review matches before writing GPS tags.</li>
-            <li>Group results by donor photo location.</li>
-            <li>Packaged builds include ExifTool.</li>
-          </ul>
-        </div>
+          <figcaption>
+            <strong>No GPX tracklog. No always-on Bluetooth.</strong>
+            Use the phone photos you already took as GPS donors for your camera files.
+          </figcaption>
+        </figure>
       </section>
 
-      <section id="download" class="panel" aria-labelledby="download-title">
+      <section id="download" class="section" aria-labelledby="download-title">
         <div class="section-heading">
           <p class="eyebrow">Latest release</p>
-          <h2 id="download-title">Download GeoTagCopy</h2>
+          <h2 id="download-title">Download GeoTagCopy for macOS or Windows</h2>
           <p>
+            Free and open source builds are distributed through GitHub releases.
             <span id="latest-version">Checking latest version...</span>
           </p>
         </div>
         <div class="download-grid">
           <article class="download-card">
-            <h3>macOS</h3>
-            <p>Download the signed app bundle when available.</p>
+            <h3>macOS geotagging app</h3>
+            <p>For photographers who want a simple GeoSetter alternative on Mac.</p>
             <a id="download-macos" class="button primary" href="https://github.com/cloudsecmentor/geotagcopy/releases/latest">
-              Releases on GitHub
+              Download for macOS
             </a>
             <a id="download-macos-onefile" class="subtle-link" href="https://github.com/cloudsecmentor/geotagcopy/releases/latest">
               Command-line executable
             </a>
           </article>
           <article class="download-card">
-            <h3>Windows</h3>
-            <p>Download the Windows app directory or one-file executable.</p>
+            <h3>Windows geotagging app</h3>
+            <p>For camera folders that need GPS copied from nearby phone photos.</p>
             <a id="download-windows" class="button primary" href="https://github.com/cloudsecmentor/geotagcopy/releases/latest">
-              Releases on GitHub
+              Download for Windows
             </a>
             <a id="download-windows-onefile" class="subtle-link" href="https://github.com/cloudsecmentor/geotagcopy/releases/latest">
               One-file executable
@@ -91,7 +155,113 @@
         </div>
       </section>
 
-      <section id="donate" class="panel split" aria-labelledby="donate-title">
+      <section class="section compact" aria-labelledby="fit-title">
+        <div class="section-heading">
+          <p class="eyebrow">Best fit</p>
+          <h2 id="fit-title">Built for the exact post-shoot GPS repair problem</h2>
+          <p>
+            GeoTagCopy is intentionally narrow: it helps when your camera files
+            have no GPS, but your phone photos from the same walk, trip, wedding,
+            hike, inspection, or location scout already do.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Camera clock matching</h3>
+            <p>Match donor phone photos to untagged camera photos by nearest timestamp.</p>
+          </article>
+          <article>
+            <h3>Local and private</h3>
+            <p>Keep original files on your computer instead of uploading photos to a web tool.</p>
+          </article>
+          <article>
+            <h3>Review before writing</h3>
+            <p>Inspect grouped matches first, then write only the GPS tags you trust.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="workflow" class="section" aria-labelledby="workflow-title">
+        <div class="section-heading">
+          <p class="eyebrow">Workflow</p>
+          <h2 id="workflow-title">How to copy GPS from phone photos to camera photos</h2>
+        </div>
+        <ol class="steps">
+          <li>
+            <strong>Choose your geotagged phone folder.</strong>
+            Use iPhone, Android, or other photos that already contain GPS metadata.
+          </li>
+          <li>
+            <strong>Choose your camera folder.</strong>
+            Select the DSLR or mirrorless photos that need location data.
+          </li>
+          <li>
+            <strong>Review timestamp matches.</strong>
+            GeoTagCopy reads EXIF metadata and groups likely matches by GPS location.
+          </li>
+          <li>
+            <strong>Apply GPS tags locally.</strong>
+            Select the matches you trust, then write coordinates with ExifTool.
+          </li>
+        </ol>
+      </section>
+
+      <section id="compare" class="section" aria-labelledby="compare-title">
+        <div class="section-heading">
+          <p class="eyebrow">Alternatives</p>
+          <h2 id="compare-title">A focused alternative to broad geotagging suites</h2>
+          <p>
+            Tools like HoudahGeo, GeoSetter, Lightroom, and ExifTool are powerful.
+            GeoTagCopy is for photographers who want the narrower reference-photo
+            workflow without building a GPX tracklog or depending on camera-vendor
+            Bluetooth location sync.
+          </p>
+        </div>
+        <div class="link-grid">
+          <a href="copy-gps-from-iphone-photos.html">
+            Copy GPS from iPhone photos
+          </a>
+          <a href="houdahgeo-alternative.html">
+            HoudahGeo alternative
+          </a>
+          <a href="geosetter-alternative-for-mac.html">
+            GeoSetter alternative for Mac
+          </a>
+        </div>
+      </section>
+
+      <section id="faq" class="section" aria-labelledby="faq-title">
+        <div class="section-heading">
+          <p class="eyebrow">FAQ</p>
+          <h2 id="faq-title">Common geotagging questions</h2>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>Can I geotag Sony, Canon, Nikon, or Fujifilm photos after the shoot?</summary>
+            <p>
+              Yes, as long as you have phone photos with GPS metadata from the
+              same timeframe. GeoTagCopy uses those files as location references.
+            </p>
+          </details>
+          <details>
+            <summary>Is this a replacement for Lightroom Map or Apple Photos maps?</summary>
+            <p>
+              It complements them. GeoTagCopy writes GPS coordinates first, then
+              apps like Lightroom and Photos can use that metadata for map views,
+              filtering, and organization.
+            </p>
+          </details>
+          <details>
+            <summary>What makes it different from running ExifTool commands?</summary>
+            <p>
+              ExifTool does the metadata writing, but GeoTagCopy gives you a
+              desktop review flow so you can inspect matches before changing files.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section id="donate" class="section split" aria-labelledby="donate-title">
         <div>
           <p class="eyebrow">Keep it sustainable</p>
           <h2 id="donate-title">Support GeoTagCopy</h2>
@@ -110,28 +280,7 @@
         </div>
       </section>
 
-      <section id="how-it-works" class="panel" aria-labelledby="how-title">
-        <div class="section-heading">
-          <p class="eyebrow">Workflow</p>
-          <h2 id="how-title">How it works</h2>
-        </div>
-        <ol class="steps">
-          <li>
-            <strong>Choose two folders.</strong>
-            Select one folder with geotagged phone photos and another with untagged camera photos.
-          </li>
-          <li>
-            <strong>Review timestamp matches.</strong>
-            GeoTagCopy reads EXIF metadata and groups likely matches by GPS location.
-          </li>
-          <li>
-            <strong>Apply GPS tags.</strong>
-            Select the matches you trust, then write GPS coordinates with ExifTool.
-          </li>
-        </ol>
-      </section>
-
-      <section class="panel source-panel" aria-labelledby="source-title">
+      <section class="section source-panel" aria-labelledby="source-title">
         <div>
           <p class="eyebrow">Open source</p>
           <h2 id="source-title">Review, fork, or contribute</h2>
