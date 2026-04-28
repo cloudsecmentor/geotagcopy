@@ -6,13 +6,13 @@
     <title>GeoTagCopy - Copy GPS from Phone Photos to Camera Photos</title>
     <meta
       name="description"
-      content="GeoTagCopy is a local desktop app that copies GPS coordinates from geotagged iPhone or Android photos to untagged camera photos by timestamp. No GPX tracklog or flaky Bluetooth sync required."
+      content="GeoTagCopy copies GPS coordinates from geotagged iPhone or Android photos to camera photos that missed location data. It matches by time and writes locally with ExifTool."
     >
     <link rel="canonical" href="__SITE_URL__/">
     <meta property="og:title" content="GeoTagCopy - Copy GPS from Phone Photos to Camera Photos">
     <meta
       property="og:description"
-      content="Use phone photos as GPS references for Sony, Canon, Nikon, Fujifilm, and other camera photos. Preview matches locally, then write coordinates with ExifTool."
+      content="Use phone photos as location references for Sony, Canon, Nikon, Fujifilm, and other camera photos. Check the matches before writing GPS metadata."
     >
     <meta property="og:type" content="website">
     <meta property="og:url" content="__SITE_URL__/">
@@ -21,7 +21,7 @@
     <meta name="twitter:title" content="GeoTagCopy - Copy GPS from Phone Photos to Camera Photos">
     <meta
       name="twitter:description"
-      content="Local desktop geotagging for hybrid camera-and-phone workflows. Copy phone GPS to camera files in minutes."
+      content="Copy location from phone photos to camera files that came home without GPS."
     >
     <meta name="twitter:image" content="__SITE_URL__/assets/icon.png">
     <link rel="icon" href="assets/favicon.ico">
@@ -36,7 +36,7 @@
         "name": "GeoTagCopy",
         "applicationCategory": "MultimediaApplication",
         "operatingSystem": "macOS, Windows",
-        "description": "Local desktop app for copying GPS coordinates from geotagged phone photos to untagged camera photos by timestamp.",
+        "description": "Local desktop app for copying GPS coordinates from geotagged phone photos to camera photos that missed location data.",
         "url": "__SITE_URL__/",
         "downloadUrl": "__SITE_URL__/#download",
         "image": "__SITE_URL__/assets/icon.png",
@@ -59,7 +59,7 @@
             "name": "Can GeoTagCopy copy GPS from iPhone photos to camera photos?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. GeoTagCopy uses geotagged iPhone or Android photos as reference images, matches nearby camera photos by timestamp, and writes GPS coordinates after you review the matches."
+              "text": "Yes. GeoTagCopy uses geotagged iPhone or Android photos as reference images, matches nearby camera photos by timestamp, and writes GPS coordinates after you check the matches."
             }
           },
           {
@@ -67,7 +67,7 @@
             "name": "Do I need a GPX tracklog?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. GeoTagCopy is designed for reference-photo workflows where your phone photos already contain location metadata."
+              "text": "No. GeoTagCopy is for cases where your phone photos already contain the location metadata you need."
             }
           },
           {
@@ -100,13 +100,13 @@
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Local desktop geotagging</p>
-          <h1 id="hero-title">Copy phone GPS to camera photos in minutes.</h1>
+          <p class="eyebrow">Desktop photo geotagging</p>
+          <h1 id="hero-title">Copy phone GPS to the camera photos that missed it.</h1>
           <p class="hero-text">
-            GeoTagCopy matches geotagged iPhone or Android reference photos with
-            untagged Sony, Canon, Nikon, Fujifilm, and other camera photos by
-            timestamp. Preview the matches locally, then write GPS coordinates
-            with ExifTool.
+            Took a few phone shots while shooting with your camera? GeoTagCopy
+            can use those iPhone or Android photos as location references for
+            Sony, Canon, Nikon, Fujifilm, and other camera files. Check the
+            matches, then write GPS tags on your computer.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="#download">Download latest</a>
@@ -116,8 +116,8 @@
         <figure class="hero-visual" aria-label="GeoTagCopy reference photo workflow">
           <img class="app-icon" src="assets/icon.png" width="160" height="160" alt="GeoTagCopy map pin icon">
           <figcaption>
-            <strong>No GPX tracklog. No always-on Bluetooth.</strong>
-            Use the phone photos you already took as GPS donors for your camera files.
+            Useful when GPS logging was not running, or when a camera companion
+            app forgot to keep location sync alive.
           </figcaption>
         </figure>
       </section>
@@ -127,7 +127,7 @@
           <p class="eyebrow">Latest release</p>
           <h2 id="download-title">Download GeoTagCopy for macOS or Windows</h2>
           <p>
-            Free and open source builds are distributed through GitHub releases.
+            Download free open source builds from GitHub releases.
             <span id="latest-version">Checking latest version...</span>
           </p>
         </div>
@@ -157,26 +157,22 @@
 
       <section class="section compact" aria-labelledby="fit-title">
         <div class="section-heading">
-          <p class="eyebrow">Best fit</p>
-          <h2 id="fit-title">Built for the exact post-shoot GPS repair problem</h2>
+          <p class="eyebrow">Good use case</p>
+          <h2 id="fit-title">For the photos that came home without location data</h2>
           <p>
-            GeoTagCopy is intentionally narrow: it helps when your camera files
-            have no GPS, but your phone photos from the same walk, trip, wedding,
-            hike, inspection, or location scout already do.
+            This is a small utility for an annoying cleanup job. If a phone
+            photo has the location and a nearby camera photo does not,
+            GeoTagCopy lines them up by time.
           </p>
         </div>
         <div class="feature-grid">
           <article>
-            <h3>Camera clock matching</h3>
-            <p>Match donor phone photos to untagged camera photos by nearest timestamp.</p>
+            <h3>Time matching</h3>
+            <p>Use the camera clock to find the closest phone photo with GPS.</p>
           </article>
           <article>
-            <h3>Local and private</h3>
-            <p>Keep original files on your computer instead of uploading photos to a web tool.</p>
-          </article>
-          <article>
-            <h3>Review before writing</h3>
-            <p>Inspect grouped matches first, then write only the GPS tags you trust.</p>
+            <h3>Local writes</h3>
+            <p>Keep the files on your computer and write metadata with ExifTool.</p>
           </article>
         </div>
       </section>
@@ -188,20 +184,19 @@
         </div>
         <ol class="steps">
           <li>
-            <strong>Choose your geotagged phone folder.</strong>
-            Use iPhone, Android, or other photos that already contain GPS metadata.
+            Choose the folder with iPhone, Android, or other photos that already
+            contain GPS metadata.
           </li>
           <li>
-            <strong>Choose your camera folder.</strong>
-            Select the DSLR or mirrorless photos that need location data.
+            Choose the folder with the DSLR or mirrorless photos that need
+            location data.
           </li>
           <li>
-            <strong>Review timestamp matches.</strong>
-            GeoTagCopy reads EXIF metadata and groups likely matches by GPS location.
+            Check the timestamp matches and the location groups before changing
+            any files.
           </li>
           <li>
-            <strong>Apply GPS tags locally.</strong>
-            Select the matches you trust, then write coordinates with ExifTool.
+            Write the GPS tags locally with ExifTool.
           </li>
         </ol>
       </section>
@@ -209,12 +204,11 @@
       <section id="compare" class="section" aria-labelledby="compare-title">
         <div class="section-heading">
           <p class="eyebrow">Alternatives</p>
-          <h2 id="compare-title">A focused alternative to broad geotagging suites</h2>
+          <h2 id="compare-title">When a full geotagging suite is more than you need</h2>
           <p>
-            Tools like HoudahGeo, GeoSetter, Lightroom, and ExifTool are powerful.
-            GeoTagCopy is for photographers who want the narrower reference-photo
-            workflow without building a GPX tracklog or depending on camera-vendor
-            Bluetooth location sync.
+            HoudahGeo, GeoSetter, Lightroom, and ExifTool all cover more ground.
+            GeoTagCopy handles the smaller job: phone photos have GPS, camera
+            photos do not, and you want to copy the location after the shoot.
           </p>
         </div>
         <div class="link-grid">
@@ -246,16 +240,15 @@
           <details>
             <summary>Is this a replacement for Lightroom Map or Apple Photos maps?</summary>
             <p>
-              It complements them. GeoTagCopy writes GPS coordinates first, then
-              apps like Lightroom and Photos can use that metadata for map views,
-              filtering, and organization.
+              No. GeoTagCopy writes GPS coordinates first. Lightroom and Photos
+              can then use that metadata for maps and filtering.
             </p>
           </details>
           <details>
             <summary>What makes it different from running ExifTool commands?</summary>
             <p>
-              ExifTool does the metadata writing, but GeoTagCopy gives you a
-              desktop review flow so you can inspect matches before changing files.
+              ExifTool still writes the metadata. GeoTagCopy gives you a desktop
+              screen for checking the matches before you change files.
             </p>
           </details>
         </div>
@@ -266,8 +259,8 @@
           <p class="eyebrow">Keep it sustainable</p>
           <h2 id="donate-title">Support GeoTagCopy</h2>
           <p>
-            Donations help cover signing certificates, build runners, hosting,
-            and maintenance time while keeping the app open source.
+            Donations help pay for signing certificates, build runners, hosting,
+            and the slow maintenance work around releases.
           </p>
         </div>
         <div class="donate-box">
@@ -285,8 +278,8 @@
           <p class="eyebrow">Open source</p>
           <h2 id="source-title">Review, fork, or contribute</h2>
           <p>
-            GeoTagCopy is released under the MIT License. Contributions,
-            bug reports, and build verification are welcome.
+            GeoTagCopy is released under the MIT License. Open issues and pull
+            requests on GitHub.
           </p>
         </div>
         <a class="button secondary" data-repo-link href="https://github.com/cloudsecmentor/geotagcopy">
@@ -297,7 +290,7 @@
 
     <footer class="site-footer">
       <p>
-        Made by Sergey. Licensed under the
+        Made by CloudSecMentor. Licensed under the
         <a href="https://github.com/cloudsecmentor/geotagcopy/blob/main/LICENSE">MIT License</a>.
       </p>
       <p>

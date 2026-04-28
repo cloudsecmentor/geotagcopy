@@ -54,7 +54,7 @@ arg_parser.usage = """
 
 python3 src/gtc-01-export-geo-info.py -f [PATH_1 PATH_2] -o [CSV_DATA_FOLDER] -r [-s YYYY-MM-DD]
 
-python3 src/gtc-01-export-geo-info.py -f '/Users/sergey/Pictures/iPhone Sergey/DCIM' '/Users/sergey/Pictures/a6000/2023/' -o data/2307/ -r -s 2023-07-01
+python3 src/gtc-01-export-geo-info.py -f '/Users/example/Pictures/iPhone/DCIM' '/Users/example/Pictures/a6000/2023/' -o data/2307/ -r -s 2023-07-01
 
 """
 arg_parser.add_argument('-s', '--start-date', 
@@ -79,9 +79,9 @@ arg_parser.add_argument('-v', '--verbosity', type=int, default=2, choices=range(
 
 
 # for inline - remove for script
-args_text = [   "-f",   "/Users/sergey/Pictures/iPhone Sergey", 
-                        "/Users/sergey/Pictures/exports", 
-                        "/Users/sergey/Pictures/iPhone Irina/iPhone12/106APPLE", 
+args_text = [   "-f",   "/Users/example/Pictures/iPhone", 
+                        "/Users/example/Pictures/exports", 
+                        "/Users/example/Pictures/iPhone/iPhone12/106APPLE", 
                 "-v", "1"]
 args = arg_parser.parse_args(args_text)
 # for inline - remove for script
