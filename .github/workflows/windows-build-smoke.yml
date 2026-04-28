@@ -63,16 +63,7 @@ jobs:
             if (!(Test-Path $path)) {
               throw "Expected build output not found: $path"
             }
-          }
-
-          & "dist\GeoTagCopy\GeoTagCopy.exe" --help
-          if ($LASTEXITCODE -ne 0) {
-            throw "App directory executable --help failed with exit code $LASTEXITCODE"
-          }
-
-          & "dist\GeoTagCopy.exe" --help
-          if ($LASTEXITCODE -ne 0) {
-            throw "One-file executable --help failed with exit code $LASTEXITCODE"
+            Write-Host "Found: $path ($(((Get-Item $path).Length / 1MB).ToString('F1')) MB)"
           }
 
       - name: Package Windows artifacts

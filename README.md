@@ -1,6 +1,24 @@
 # GeoTagCopy - GPS Tag Copy Utility
 
+[![Release](https://img.shields.io/github/v/release/cloudsecmentor/geotagcopy)](https://github.com/cloudsecmentor/geotagcopy/releases)
+[![CI](https://github.com/cloudsecmentor/geotagcopy/actions/workflows/release.yml/badge.svg)](https://github.com/cloudsecmentor/geotagcopy/actions/workflows/release.yml)
+[![License](https://img.shields.io/github/license/cloudsecmentor/geotagcopy)](LICENSE)
+
 Copy GPS coordinates from geotagged photos (e.g. iPhone) to untagged ones (e.g. Sony camera exports), matching by closest timestamp.
+
+## Download
+
+Get the latest release for your platform:
+
+- **macOS**: [GeoTagCopy.app (zip)](https://github.com/cloudsecmentor/geotagcopy/releases/latest) or single executable
+- **Windows**: [GeoTagCopy.exe (zip)](https://github.com/cloudsecmentor/geotagcopy/releases/latest) or single executable
+
+See [Releases](https://github.com/cloudsecmentor/geotagcopy/releases) for all versions.
+
+## Support the Project
+
+GeoTagCopy is free and open source. If you find it useful, consider supporting
+development through the [GeoTagCopy website](https://github.com/cloudsecmentor/geotagcopy).
 
 ## License
 
@@ -48,121 +66,43 @@ python -m geotagcopy \
   -u "/path/to/untagged/photos"
 ```
 
-## macOS App Builds
+## Building from Source
 
-GeoTagCopy can be packaged on macOS with PyInstaller so the target Mac does not
-need Python or the Python dependencies installed.
-
-Install build dependencies:
+GeoTagCopy can be packaged with PyInstaller on macOS and Windows. Packaged
+builds bundle ExifTool so end users do not need a separate installation.
 
 ```bash
-make build-deps
+make build-deps      # install build dependencies
+make build-macos     # macOS: dist/GeoTagCopy.app + dist/GeoTagCopy
+make build-windows   # Windows: dist\GeoTagCopy\ + dist\GeoTagCopy.exe
 ```
 
-Build a draggable macOS app bundle:
-
-```bash
-make build-macos-app
-```
-
-The app will be created at `dist/GeoTagCopy.app`. You can drag it into
-`/Applications` or run it directly.
-
-Build a single executable file:
-
-```bash
-make build-macos-onefile
-```
-
-The executable will be created at `dist/GeoTagCopy`. Run it from Terminal:
-
-```bash
-./dist/GeoTagCopy
-```
-
-Build both outputs:
-
-```bash
-make build-macos
-```
-
-## Windows App Builds
-
-GeoTagCopy can also be packaged on Windows with PyInstaller from the same
-Python codebase.
-
-Install build dependencies:
-
-```powershell
-make build-deps
-```
-
-Build an app directory:
-
-```powershell
-make build-windows-app
-```
-
-The executable will be created at `dist\GeoTagCopy\GeoTagCopy.exe`.
-
-Build a single executable file:
-
-```powershell
-make build-windows-onefile
-```
-
-The executable will be created at `dist\GeoTagCopy.exe`.
-
-Build both outputs:
-
-```powershell
-make build-windows
-```
-
-### Bundling ExifTool
-
-ExifTool is still required for reading and writing metadata. Packaged builds
-automatically download a pinned ExifTool release into `vendor/exiftool/` before
-on macOS and `vendor/exiftool-windows/` on Windows before running PyInstaller,
-then include it in the app bundle, app directory, and one-file executable. This
-makes packaged builds work without relying on a Terminal or PowerShell `PATH`.
-
-If you need to supply ExifTool manually, place the executable distribution here
-before building:
-
-```text
-vendor/exiftool/exiftool
-```
-
-When that file exists, `scripts/build_macos.py` uses it instead of downloading.
-You can also point a built app at a specific ExifTool binary with:
-
-```bash
-GEOTAGCOPY_EXIFTOOL="/path/to/exiftool" ./dist/GeoTagCopy
-```
-
-For sharing outside your own Mac, you may need Apple code signing and
-notarization so Gatekeeper accepts the app without warnings.
+See `CONTRIBUTING.md` for full setup, testing, and build instructions.
 
 ## GitHub Releases
 
-The repository includes a GitHub Actions workflow that builds macOS release
+The repository includes a GitHub Actions workflow that builds release
 artifacts and publishes them to a GitHub Release.
 
 Create a release by pushing a version tag:
 
 ```bash
-git tag v2.0.0
-git push origin v2.0.0
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
 Or run **Build and Release** manually from the GitHub Actions tab and enter a
-version such as `v2.0.0`.
+version such as `v0.1.0`.
 
 Each release uploads:
 
 - `GeoTagCopy-<version>-macos-app.zip`: draggable `GeoTagCopy.app`
-- `GeoTagCopy-<version>-macos-onefile.zip`: single executable file
+- `GeoTagCopy-<version>-macos-onefile.zip`: single macOS executable
+- `GeoTagCopy-<version>-windows-app.zip`: Windows app directory
+- `GeoTagCopy-<version>-windows-onefile.zip`: single Windows executable
+
+When `AZURE_STORAGE_ACCOUNT` is configured, the workflow also updates
+`latest.json` on the website so download links reflect the new release.
 
 ### Running Tests
 

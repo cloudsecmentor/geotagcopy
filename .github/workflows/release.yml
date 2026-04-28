@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version, for example v2.0.0"
+        description: "Release version, for example v0.1.0"
         required: true
         type: string
   push:
@@ -76,3 +76,63 @@ jobs:
           files: |
             dist/GeoTagCopy-${{ steps.version.outputs.value }}-macos-app.zip
             dist/GeoTagCopy-${{ steps.version.outputs.value }}-macos-onefile.zip
+
+  update-latest-json:
+    name: Update latest.json on website
+    needs: build-macos
+    runs-on: ubuntu-latest
+    if: vars.AZURE_STORAGE_ACCOUNT != ''
+
+    steps:
+      - name: Set release version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build latest.json
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json, os, datetime
+          v = os.environ["VERSION"]
+          repo = os.environ["REPO"]
+          base = f"https://github.com/{repo}/releases/download/{v}"
+          data = {
+            "version": v,
+            "macos": {
+              "app": f"{base}/GeoTagCopy-{v}-macos-app.zip",
+              "onefile": f"{base}/GeoTagCopy-{v}-macos-onefile.zip",
+            },
+            "windows": {
+              "app": f"{base}/GeoTagCopy-{v}-windows-app.zip",
+              "onefile": f"{base}/GeoTagCopy-{v}-windows-onefile.zip",
+            },
+            "publishedAt": datetime.datetime.now(datetime.timezone.utc)
+              .isoformat(timespec="seconds"),
+          }
+          with open("latest.json", "w") as f:
+            json.dump(data, f, indent=2)
+          print(json.dumps(data, indent=2))
+          PY
+
+      - name: Upload latest.json to Azure Storage
+        env:
+          AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        run: |
+          az storage blob upload \
+            --account-name "$AZURE_STORAGE_ACCOUNT" \
+            --account-key "$AZURE_STORAGE_ACCOUNT_KEY" \
+            --container-name '$web' \
+            --file latest.json \
+            --name latest.json \
+            --content-type "application/json; charset=utf-8" \
+            --content-cache-control "public, max-age=60" \
+            --overwrite \
+            --only-show-errors
