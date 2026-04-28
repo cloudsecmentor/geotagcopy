@@ -26,7 +26,7 @@
       donateLink.href = paymentLink;
       donateLink.removeAttribute("aria-disabled");
       if (donateNote) {
-        donateNote.textContent = "Secure payment is hosted by Stripe.";
+        donateNote.textContent = "Payment is processed by our partner, podocracy.win, and hosted by Stripe.";
       }
       return;
     }
