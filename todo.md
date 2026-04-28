@@ -569,7 +569,7 @@ site/
 
 ## Task 7 — Site deployment workflow (Azure Storage static website)
 
-- [ ] **Status:** not started
+- [x] **Status:** completed
 - **Depends on:** Task 6
 - **Acceptance criteria:**
   - A new workflow `.github/workflows/deploy-site.yml`:
@@ -584,10 +584,21 @@ site/
       `.ico`, `.png`, `.svg`.
     - Purges the Azure CDN endpoint **only if** a CDN profile/endpoint is
       configured (via repo variables).
-  - Authentication uses **OIDC federated credentials** (preferred) — no
-    long-lived secrets — falling back to `AZURE_CREDENTIALS` JSON if OIDC is
-    not configured.
+  - Authentication uses GitHub repository secrets. Current implementation uses
+    the storage account key because the user created and requested key-based
+    repo secrets; OIDC remains the preferred future hardening path.
   - The workflow does not deploy on PRs.
+
+**Outcome:** Added `.github/workflows/deploy-site.yml` with
+`workflow_dispatch`, push-to-`main` path filters, and successful release
+`workflow_run` triggers. The workflow prepares site assets, templates
+`site/config.js` from repo variables, enables static website hosting
+idempotently, uploads `site/` to `$web`, and sets per-extension content types.
+Configured repo variables `AZURE_STORAGE_ACCOUNT`, `AZURE_RESOURCE_GROUP`,
+`SUPPORT_URL`, and placeholder `STRIPE_PAYMENT_LINK`; configured secrets
+`AZURE_STORAGE_ACCOUNT_ID` and `AZURE_STORAGE_ACCOUNT_KEY`. Azure Storage static
+website settings are enabled for `index.html` and `404.html`, and the current
+site was deployed and verified at the public static website endpoint.
 
 ### Required GitHub configuration
 
@@ -600,6 +611,10 @@ Repo **variables** (public):
   Donate button.
 
 Repo **secrets** (one of these strategies):
+- **Current implementation:**
+  - `AZURE_STORAGE_ACCOUNT_KEY` — storage account access key used only by
+    GitHub Actions.
+  - `AZURE_STORAGE_ACCOUNT_ID` — full storage account resource ID.
 - **OIDC (recommended):**
   - `AZURE_CLIENT_ID` — service principal app ID with federated credential
     bound to `repo:<owner>/<repo>:ref:refs/heads/main` and
