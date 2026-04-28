@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import platform
 import shutil
 import subprocess
@@ -26,6 +27,7 @@ from _build_common import (
 
 BUNDLE_IDENTIFIER = "com.geotagcopy.app"
 VENDORED_EXIFTOOL = PROJECT_ROOT / "vendor" / "exiftool"
+DEFAULT_ENTITLEMENTS = PROJECT_ROOT / "packaging" / "macos" / "entitlements.plist"
 EXIFTOOL_ARCHIVE_NAME = f"Image-ExifTool-{EXIFTOOL_VERSION}.tar.gz"
 EXIFTOOL_ARCHIVE_URL = (
     f"https://sourceforge.net/projects/exiftool/files/{EXIFTOOL_ARCHIVE_NAME}/download"
@@ -55,6 +57,16 @@ def main() -> int:
         action="store_true",
         help="Skip downloading and bundling ExifTool.",
     )
+    parser.add_argument(
+        "--codesign-identity",
+        default=os.environ.get("MACOS_CODESIGN_IDENTITY", "").strip(),
+        help="Developer ID Application identity for PyInstaller code signing.",
+    )
+    parser.add_argument(
+        "--entitlements-file",
+        default=os.environ.get("MACOS_ENTITLEMENTS_FILE", str(DEFAULT_ENTITLEMENTS)),
+        help="Path to macOS entitlements plist used when signing.",
+    )
     args = parser.parse_args()
 
     if platform.system() != "Darwin":
@@ -75,15 +87,33 @@ def main() -> int:
 
     targets = ("app", "onefile") if args.target == "all" else (args.target,)
     for target in targets:
-        _run_pyinstaller(target=target, clean=not args.no_clean)
+        _run_pyinstaller(
+            target=target,
+            clean=not args.no_clean,
+            codesign_identity=args.codesign_identity,
+            entitlements_file=args.entitlements_file,
+        )
 
     _print_artifacts(targets)
     return 0
 
 
-def _run_pyinstaller(target: str, clean: bool) -> None:
+def _run_pyinstaller(
+    target: str,
+    clean: bool,
+    codesign_identity: str = "",
+    entitlements_file: str = "",
+) -> None:
     cmd = base_pyinstaller_command()
     cmd.extend(["--osx-bundle-identifier", BUNDLE_IDENTIFIER])
+
+    if codesign_identity:
+        cmd.extend(["--codesign-identity", codesign_identity])
+        entitlements = Path(entitlements_file).expanduser()
+        if entitlements.is_file():
+            cmd.extend(["--osx-entitlements-file", str(entitlements)])
+        else:
+            raise FileNotFoundError(f"Entitlements file not found: {entitlements}")
 
     if clean:
         cmd.append("--clean")

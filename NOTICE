@@ -1,0 +1,6 @@
+GeoTagCopy
+Copyright 2026 GeoTagCopy contributors
+
+This product includes or invokes ExifTool for reading and writing metadata.
+ExifTool is copyright Phil Harvey and is distributed under the same terms as
+Perl. See https://exiftool.org/ for upstream license and redistribution details.

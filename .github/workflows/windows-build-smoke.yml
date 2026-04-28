@@ -48,16 +48,15 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -v
 
-      - name: Build Windows app and executable
-        run: python scripts/build_windows.py --target all
+      - name: Build Windows app directory
+        run: python scripts/build_windows.py --target app
 
       - name: Verify Windows outputs
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $paths = @(
-            "dist\GeoTagCopy\GeoTagCopy.exe",
-            "dist\GeoTagCopy.exe"
+            "dist\GeoTagCopy\GeoTagCopy.exe"
           )
           foreach ($path in $paths) {
             if (!(Test-Path $path)) {
@@ -70,12 +69,9 @@ jobs:
         shell: pwsh
         run: |
           Compress-Archive -Path "dist\GeoTagCopy" -DestinationPath "dist\GeoTagCopy-windows-app.zip" -Force
-          Compress-Archive -Path "dist\GeoTagCopy.exe" -DestinationPath "dist\GeoTagCopy-windows-onefile.zip" -Force
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: geotagcopy-windows-smoke
-          path: |
-            dist/GeoTagCopy-windows-app.zip
-            dist/GeoTagCopy-windows-onefile.zip
+          path: dist/GeoTagCopy-windows-app.zip

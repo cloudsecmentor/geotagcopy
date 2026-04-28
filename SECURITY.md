@@ -7,7 +7,7 @@ Security fixes are provided for the latest released version of GeoTagCopy.
 ## Reporting a vulnerability
 
 Please report security issues privately by emailing
-security@igeotagdonor.example.
+the maintainer address listed on the GitHub repository profile.
 
 Include:
 
@@ -20,5 +20,5 @@ Please do not open a public GitHub issue for a suspected vulnerability. We will
 acknowledge reports as soon as possible and coordinate disclosure once a fix is
 available.
 
-This contact address is a placeholder until the maintainer chooses the final
-project security email.
+A dedicated security email can be added here before the first public binary
+release.

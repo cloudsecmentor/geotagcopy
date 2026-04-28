@@ -10,19 +10,22 @@ Copy GPS coordinates from geotagged photos (e.g. iPhone) to untagged ones (e.g. 
 
 Get the latest release for your platform:
 
-- **macOS**: [GeoTagCopy.app (zip)](https://github.com/cloudsecmentor/geotagcopy/releases/latest) or single executable
-- **Windows**: [GeoTagCopy.exe (zip)](https://github.com/cloudsecmentor/geotagcopy/releases/latest) or single executable
+- **macOS**: [GeoTagCopy.app (zip)](https://github.com/cloudsecmentor/geotagcopy/releases/latest)
+- **Windows**: [GeoTagCopy app directory (zip)](https://github.com/cloudsecmentor/geotagcopy/releases/latest)
 
 See [Releases](https://github.com/cloudsecmentor/geotagcopy/releases) for all versions.
 
 ## Support the Project
 
 GeoTagCopy is free and open source. If you find it useful, consider supporting
-development through the [GeoTagCopy website](https://github.com/cloudsecmentor/geotagcopy).
+development through a Stripe-hosted support page opened in your browser.
 
 ## License
 
-Licensed under the MIT License -- see `LICENSE`.
+Licensed under the Apache License 2.0 -- see `LICENSE`.
+
+GeoTagCopy bundles or invokes ExifTool for metadata reads and writes. See
+`THIRD_PARTY_NOTICES.md` for release and attribution notes.
 
 ## Problem
 
@@ -69,15 +72,20 @@ python -m geotagcopy \
 ## Building from Source
 
 GeoTagCopy can be packaged with PyInstaller on macOS and Windows. Packaged
-builds bundle ExifTool so end users do not need a separate installation.
+builds bundle ExifTool so end users do not need a separate installation. Public
+release builds prefer PyInstaller's one-directory output because it is easier to
+inspect, debug, and package into signed installers.
 
 ```bash
 make build-deps      # install build dependencies
-make build-macos     # macOS: dist/GeoTagCopy.app + dist/GeoTagCopy
-make build-windows   # Windows: dist\GeoTagCopy\ + dist\GeoTagCopy.exe
+make build-macos     # macOS: dist/GeoTagCopy.app
+make build-windows   # Windows: dist\GeoTagCopy\
 ```
 
-See `CONTRIBUTING.md` for full setup, testing, and build instructions.
+One-file builds remain available for local experiments with
+`make build-macos-onefile` and `make build-windows-onefile`, but they are not the
+recommended public launch artifacts. See `CONTRIBUTING.md` for full setup,
+testing, and build instructions.
 
 ## GitHub Releases
 
@@ -97,12 +105,12 @@ version such as `v0.1.0`.
 Each release uploads:
 
 - `GeoTagCopy-<version>-macos-app.zip`: draggable `GeoTagCopy.app`
-- `GeoTagCopy-<version>-macos-onefile.zip`: single macOS executable
 - `GeoTagCopy-<version>-windows-app.zip`: Windows app directory
-- `GeoTagCopy-<version>-windows-onefile.zip`: single Windows executable
 
 When `AZURE_STORAGE_ACCOUNT` is configured, the workflow also updates
 `latest.json` on the website so download links reflect the new release.
+
+Public signed-download launch notes live in `docs/release/public-launch.md`.
 
 ### Running Tests
 
@@ -127,4 +135,3 @@ The original 3-step pipeline is preserved under `src/`, now with Python-only exp
 - [media_geotag_mapper](https://github.com/kburchfiel/media_geotag_mapper)
 - [geotagger (PyPI)](https://pypi.org/project/geotagger/)
 - [ExifTool](https://exiftool.org/)
-

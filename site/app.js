@@ -26,7 +26,7 @@
       donateLink.href = paymentLink;
       donateLink.removeAttribute("aria-disabled");
       if (donateNote) {
-        donateNote.textContent = "Payment is processed by our partner, podocracy.win, and hosted by Stripe.";
+        donateNote.textContent = "Payment is handled by Stripe in your browser.";
       }
       return;
     }
@@ -38,9 +38,7 @@
     const latestVersion = byId("latest-version");
     const targets = [
       byId("download-macos"),
-      byId("download-macos-onefile"),
-      byId("download-windows"),
-      byId("download-windows-onefile")
+      byId("download-windows")
     ];
 
     if (latestVersion) {
@@ -59,9 +57,7 @@
     const latestVersion = byId("latest-version");
     const downloads = {
       "download-macos": data.macos && data.macos.app,
-      "download-macos-onefile": data.macos && data.macos.onefile,
-      "download-windows": data.windows && data.windows.app,
-      "download-windows-onefile": data.windows && data.windows.onefile
+      "download-windows": data.windows && data.windows.app
     };
 
     if (latestVersion) {
@@ -92,7 +88,7 @@
           data &&
           data.macos &&
           data.windows &&
-          (data.macos.app || data.macos.onefile || data.windows.app || data.windows.onefile);
+          (data.macos.app || data.windows.app);
 
         if (!hasDownloads) {
           setDownloadFallback("Release downloads are coming soon.");

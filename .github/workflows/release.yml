@@ -45,27 +45,90 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -v
 
-      - name: Build macOS app and executable
-        run: python scripts/build_macos.py --target all
+      - name: Build macOS app bundle
+        run: python scripts/build_macos.py --target app
 
       - name: Package app bundle
         run: |
           ditto -c -k --keepParent "dist/GeoTagCopy.app" \
             "dist/GeoTagCopy-${{ steps.version.outputs.value }}-macos-app.zip"
 
-      - name: Package one-file executable
-        run: |
-          chmod +x "dist/GeoTagCopy"
-          ditto -c -k "dist/GeoTagCopy" \
-            "dist/GeoTagCopy-${{ steps.version.outputs.value }}-macos-onefile.zip"
-
-      - name: Upload build artifacts
+      - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: geotagcopy-macos-${{ steps.version.outputs.value }}
-          path: |
-            dist/GeoTagCopy-${{ steps.version.outputs.value }}-macos-app.zip
-            dist/GeoTagCopy-${{ steps.version.outputs.value }}-macos-onefile.zip
+          path: dist/GeoTagCopy-${{ steps.version.outputs.value }}-macos-app.zip
+
+  build-windows:
+    name: Build Windows release
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set release version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r requirements-build.txt
+
+      - name: Run tests
+        run: python -m unittest discover -v
+
+      - name: Build Windows app directory
+        run: python scripts/build_windows.py --target app
+
+      - name: Package app directory
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "dist\GeoTagCopy" `
+            -DestinationPath "dist\GeoTagCopy-${{ steps.version.outputs.value }}-windows-app.zip" `
+            -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: geotagcopy-windows-${{ steps.version.outputs.value }}
+          path: dist/GeoTagCopy-${{ steps.version.outputs.value }}-windows-app.zip
+
+  publish-release:
+    name: Publish GitHub release
+    needs:
+      - build-macos
+      - build-windows
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set release version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
@@ -73,13 +136,11 @@ jobs:
           tag_name: ${{ steps.version.outputs.value }}
           name: GeoTagCopy ${{ steps.version.outputs.value }}
           generate_release_notes: true
-          files: |
-            dist/GeoTagCopy-${{ steps.version.outputs.value }}-macos-app.zip
-            dist/GeoTagCopy-${{ steps.version.outputs.value }}-macos-onefile.zip
+          files: dist/*.zip
 
   update-latest-json:
     name: Update latest.json on website
-    needs: build-macos
+    needs: publish-release
     runs-on: ubuntu-latest
     if: vars.AZURE_STORAGE_ACCOUNT != ''
 
@@ -107,11 +168,9 @@ jobs:
             "version": v,
             "macos": {
               "app": f"{base}/GeoTagCopy-{v}-macos-app.zip",
-              "onefile": f"{base}/GeoTagCopy-{v}-macos-onefile.zip",
             },
             "windows": {
               "app": f"{base}/GeoTagCopy-{v}-windows-app.zip",
-              "onefile": f"{base}/GeoTagCopy-{v}-windows-onefile.zip",
             },
             "publishedAt": datetime.datetime.now(datetime.timezone.utc)
               .isoformat(timespec="seconds"),

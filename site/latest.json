@@ -1,12 +1,10 @@
 {
   "version": "0.0.0",
   "macos": {
-    "app": "",
-    "onefile": ""
+    "app": ""
   },
   "windows": {
-    "app": "",
-    "onefile": ""
+    "app": ""
   },
   "publishedAt": "1970-01-01T00:00:00Z"
 }

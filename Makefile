@@ -14,7 +14,7 @@ icons:
 site-assets:
 	$(PYTHON) scripts/copy_site_assets.py
 
-build-macos: build-macos-app build-macos-onefile
+build-macos: build-macos-app
 
 build-macos-app:
 	$(PYTHON) scripts/build_macos.py --target app
@@ -22,7 +22,7 @@ build-macos-app:
 build-macos-onefile:
 	$(PYTHON) scripts/build_macos.py --target onefile
 
-build-windows: build-windows-app build-windows-onefile
+build-windows: build-windows-app
 
 build-windows-app:
 	$(PYTHON) scripts/build_windows.py --target app
