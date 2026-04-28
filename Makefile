@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: setup build-deps icons build-macos build-macos-app build-macos-onefile build-windows build-windows-app build-windows-onefile test
+.PHONY: setup build-deps icons site-assets build-macos build-macos-app build-macos-onefile build-windows build-windows-app build-windows-onefile test
 
 setup:
 	$(PYTHON) -m pip install -r requirements.txt
@@ -10,6 +10,9 @@ build-deps:
 
 icons:
 	$(PYTHON) scripts/build_icons.py
+
+site-assets:
+	$(PYTHON) scripts/copy_site_assets.py
 
 build-macos: build-macos-app build-macos-onefile
 

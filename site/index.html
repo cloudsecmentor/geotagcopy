@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GeoTagCopy - GPS Tag Copy Utility</title>
+    <meta
+      name="description"
+      content="Copy GPS coordinates from geotagged photos to camera photos by matching the closest timestamps."
+    >
+    <meta property="og:title" content="GeoTagCopy">
+    <meta
+      property="og:description"
+      content="A donation-supported desktop app for copying GPS tags from phone photos to camera photos."
+    >
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="assets/icon.png">
+    <link rel="icon" href="assets/favicon.ico">
+    <link rel="apple-touch-icon" href="assets/icon.png">
+    <link rel="stylesheet" href="styles.css">
+    <script src="config.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="GeoTagCopy home">
+        <img src="assets/favicon-32.png" width="32" height="32" alt="">
+        <span>GeoTagCopy</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#download">Download</a>
+        <a href="#donate">Donate</a>
+        <a href="#how-it-works">How it works</a>
+        <a data-repo-link href="https://github.com/cloudsecmentor/geotagcopy">Source</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Donation-supported open source desktop app</p>
+          <h1 id="hero-title">Copy GPS tags from phone photos to camera photos.</h1>
+          <p class="hero-text">
+            GeoTagCopy matches your untagged camera photos with geotagged phone
+            photos by timestamp, then writes the GPS coordinates with ExifTool.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#download">Download latest</a>
+            <a class="button secondary" href="#donate">Support the project</a>
+          </div>
+        </div>
+        <div class="hero-card" aria-label="GeoTagCopy summary">
+          <img class="app-icon" src="assets/icon.png" width="160" height="160" alt="GeoTagCopy map pin icon">
+          <ul>
+            <li>Review matches before writing GPS tags.</li>
+            <li>Group results by donor photo location.</li>
+            <li>Packaged builds include ExifTool.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="download" class="panel" aria-labelledby="download-title">
+        <div class="section-heading">
+          <p class="eyebrow">Latest release</p>
+          <h2 id="download-title">Download GeoTagCopy</h2>
+          <p>
+            <span id="latest-version">Checking latest version...</span>
+          </p>
+        </div>
+        <div class="download-grid">
+          <article class="download-card">
+            <h3>macOS</h3>
+            <p>Download the signed app bundle when available.</p>
+            <a id="download-macos" class="button primary" href="https://github.com/cloudsecmentor/geotagcopy/releases/latest">
+              Releases on GitHub
+            </a>
+            <a id="download-macos-onefile" class="subtle-link" href="https://github.com/cloudsecmentor/geotagcopy/releases/latest">
+              Command-line executable
+            </a>
+          </article>
+          <article class="download-card">
+            <h3>Windows</h3>
+            <p>Download the Windows app directory or one-file executable.</p>
+            <a id="download-windows" class="button primary" href="https://github.com/cloudsecmentor/geotagcopy/releases/latest">
+              Releases on GitHub
+            </a>
+            <a id="download-windows-onefile" class="subtle-link" href="https://github.com/cloudsecmentor/geotagcopy/releases/latest">
+              One-file executable
+            </a>
+          </article>
+        </div>
+      </section>
+
+      <section id="donate" class="panel split" aria-labelledby="donate-title">
+        <div>
+          <p class="eyebrow">Keep it sustainable</p>
+          <h2 id="donate-title">Support GeoTagCopy</h2>
+          <p>
+            Donations help cover signing certificates, build runners, hosting,
+            and maintenance time while keeping the app open source.
+          </p>
+        </div>
+        <div class="donate-box">
+          <a id="donate-link" class="button primary" href="#" aria-disabled="true">
+            Donate with Stripe
+          </a>
+          <p id="donate-note">
+            Donation link will be enabled after the Stripe Payment Link is configured.
+          </p>
+        </div>
+      </section>
+
+      <section id="how-it-works" class="panel" aria-labelledby="how-title">
+        <div class="section-heading">
+          <p class="eyebrow">Workflow</p>
+          <h2 id="how-title">How it works</h2>
+        </div>
+        <ol class="steps">
+          <li>
+            <strong>Choose two folders.</strong>
+            Select one folder with geotagged phone photos and another with untagged camera photos.
+          </li>
+          <li>
+            <strong>Review timestamp matches.</strong>
+            GeoTagCopy reads EXIF metadata and groups likely matches by GPS location.
+          </li>
+          <li>
+            <strong>Apply GPS tags.</strong>
+            Select the matches you trust, then write GPS coordinates with ExifTool.
+          </li>
+        </ol>
+      </section>
+
+      <section class="panel source-panel" aria-labelledby="source-title">
+        <div>
+          <p class="eyebrow">Open source</p>
+          <h2 id="source-title">Review, fork, or contribute</h2>
+          <p>
+            GeoTagCopy is released under the MIT License. Contributions,
+            bug reports, and build verification are welcome.
+          </p>
+        </div>
+        <a class="button secondary" data-repo-link href="https://github.com/cloudsecmentor/geotagcopy">
+          View source on GitHub
+        </a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Made by Sergey. Licensed under the
+        <a href="https://github.com/cloudsecmentor/geotagcopy/blob/main/LICENSE">MIT License</a>.
+      </p>
+      <p>
+        <a data-repo-link href="https://github.com/cloudsecmentor/geotagcopy">GitHub</a>
+        <span aria-hidden="true">/</span>
+        <a href="#download">Downloads</a>
+        <span aria-hidden="true">/</span>
+        <a href="#donate">Donate</a>
+      </p>
+    </footer>
+  </body>
+</html>

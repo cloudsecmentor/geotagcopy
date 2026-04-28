@@ -474,7 +474,7 @@ Repo **variable** (not secret):
 
 ## Task 6 — `geotagcopy` static landing page (starter)
 
-- [ ] **Status:** not started
+- [x] **Status:** completed
 - **Depends on:** Task 2 (for favicon), Task 3 (for app-to-site support flow)
 - **Acceptance criteria:**
   - A new top-level directory `site/` contains a fully static, dependency-free
@@ -497,6 +497,14 @@ Repo **variable** (not secret):
     (no external CSS frameworks; embed any small icons inline as SVG).
   - The page is accessible (semantic HTML, alt text, color contrast ≥ 4.5:1
     against background, focus ring visible).
+
+**Outcome:** Added the static `site/` starter with `index.html`, `styles.css`,
+`app.js`, `config.js`, `latest.json`, `robots.txt`, and `sitemap.xml`. Added
+`scripts/copy_site_assets.py` and `make site-assets` to copy generated icons
+into `site/assets/` and create a placeholder `screenshot.png`. The app-facing
+support flow remains site-first: the site owns `STRIPE_PAYMENT_LINK`, while
+packaged apps will open `SUPPORT_URL`. Verified JSON/script validity, copied
+site assets, and smoke-tested the site through a local `http.server`.
 
 ### File layout
 
