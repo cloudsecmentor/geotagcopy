@@ -32,6 +32,7 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+geotagcopy/_build_info.py
 
 # Installer logs
 pip-log.txt
@@ -101,8 +102,8 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
-.env
+# Environments and local secrets
+.env*
 .venv
 env/
 venv/
@@ -117,8 +118,8 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# mkdocs documentation
-/site
+# Static site build output
+site/dist/
 
 # mypy
 .mypy_cache/
@@ -135,3 +136,11 @@ dmypy.json
 
 # Downloaded during macOS packaging
 vendor/exiftool/
+
+# Downloaded during Windows packaging
+vendor/exiftool-windows/
+
+# Signing credentials and certificates
+*.p12
+*.p8
+*.cer

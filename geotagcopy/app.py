@@ -41,6 +41,7 @@ from geotagcopy.core import (
     read_metadata,
     scan_folder,
 )
+from geotagcopy.donate import open_donate_page, should_show_donate
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -116,15 +117,36 @@ class GeoTagCopyApp(ctk.CTk):
     def _build_header(self):
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, padx=20, pady=(16, 4), sticky="ew")
+        header.grid_columnconfigure(0, weight=1)
+
+        title_frame = ctk.CTkFrame(header, fg_color="transparent")
+        title_frame.grid(row=0, column=0, sticky="ew")
         ctk.CTkLabel(
-            header, text="GeoTagCopy", font=FONT_TITLE
+            title_frame, text="GeoTagCopy", font=FONT_TITLE
         ).pack(anchor="w")
         ctk.CTkLabel(
-            header,
+            title_frame,
             text="Copy GPS coordinates from geotagged photos to untagged ones",
             font=FONT_SMALL,
             text_color=("gray50", "gray60"),
         ).pack(anchor="w")
+
+        if should_show_donate():
+            ctk.CTkButton(
+                header,
+                text="Donate",
+                width=96,
+                height=34,
+                command=open_donate_page,
+            ).grid(row=0, column=1, padx=(12, 0), sticky="e")
+            self._build_donate_menu()
+
+    def _build_donate_menu(self):
+        menu_bar = tk.Menu(self)
+        support_menu = tk.Menu(menu_bar, tearoff=False)
+        support_menu.add_command(label="Donate", command=open_donate_page)
+        menu_bar.add_cascade(label="Support", menu=support_menu)
+        self.configure(menu=menu_bar)
 
     def _build_input_section(self):
         frame = ctk.CTkFrame(self)

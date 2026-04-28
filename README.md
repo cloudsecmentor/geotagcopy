@@ -2,6 +2,10 @@
 
 Copy GPS coordinates from geotagged photos (e.g. iPhone) to untagged ones (e.g. Sony camera exports), matching by closest timestamp.
 
+## License
+
+Licensed under the MIT License -- see `LICENSE`.
+
 ## Problem
 
 Cameras like the Sony A6000 take great photos but lack GPS. Meanwhile, phones capture location with every shot. This tool bridges the gap by copying GPS tags from phone photos to camera photos based on when they were taken.

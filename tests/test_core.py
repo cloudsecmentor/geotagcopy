@@ -250,11 +250,18 @@ class TestMatchFiles(unittest.TestCase):
         self.assertEqual(match_files([self._make_tagged(datetime.now())], []), [])
         self.assertEqual(match_files([], [self._make_untagged(datetime.now())]), [])
 
-    def test_large_time_difference(self):
+    def test_large_time_difference_filtered_by_default(self):
         tagged = [self._make_tagged(datetime(2023, 6, 13, 10, 0, 0))]
         untagged = [self._make_untagged(datetime(2021, 12, 26, 10, 0, 0))]
 
         matches = match_files(tagged, untagged)
+        self.assertEqual(len(matches), 0)
+
+    def test_large_time_difference_allowed_with_explicit_limit(self):
+        tagged = [self._make_tagged(datetime(2023, 6, 13, 10, 0, 0))]
+        untagged = [self._make_untagged(datetime(2021, 12, 26, 10, 0, 0))]
+
+        matches = match_files(tagged, untagged, max_time_diff_hours=20000)
         self.assertEqual(len(matches), 1)
         self.assertGreater(matches[0].time_diff_hours, 10000)
 

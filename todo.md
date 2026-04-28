@@ -36,7 +36,7 @@ page on Azure."
 
 ## Task 1 — Open-source readiness audit
 
-- [ ] **Status:** not started
+- [x] **Status:** completed
 - **Depends on:** none
 - **Acceptance criteria:**
   - `LICENSE` is an OSI-approved open-source license that matches the user's
@@ -50,6 +50,14 @@ page on Azure."
     addresses, or absolute paths from a developer machine.
   - `.gitignore` excludes `dist/`, `build/`, `*.spec`, `vendor/exiftool/`,
     `site/dist/`, `*.p12`, `*.p8`, `*.cer`, `.env*`.
+
+**Outcome:** Implemented with unattended defaults: MIT license and
+`GeoTagCopy contributors` copyright holder. Added `CONTRIBUTING.md`,
+`CODE_OF_CONDUCT.md`, and `SECURITY.md` with placeholder project contact
+emails. Secret-pattern scan only matched documentation/planning text. `make
+test` passes; while checking it, the stale large-time-difference unit test was
+updated to match the documented 24-hour default cutoff and to cover explicit
+large-limit matching.
 
 ### Detailed instructions
 
@@ -87,7 +95,7 @@ page on Azure."
 
 ## Task 2 — App icon and favicon
 
-- [ ] **Status:** not started
+- [x] **Status:** completed
 - **Depends on:** none (can run in parallel with Task 1)
 - **Acceptance criteria:**
   - `assets/icon/icon.png` exists at 1024×1024 PNG, transparent background.
@@ -99,6 +107,13 @@ page on Azure."
   - The build pipeline references the icon (covered in later tasks).
   - The icon visually represents "geotag copy" — e.g. a map pin with a small
     arrow/copy glyph. Keep it readable at 32×32.
+
+**Outcome:** Added reproducible Pillow-based icon generation in
+`scripts/build_icons.py`, wired `make icons`, documented it in
+`CONTRIBUTING.md`, and generated `assets/icon/icon.png`, `icon.icns`,
+`icon.ico`, `favicon.ico`, and `favicon-32.png`. Smoke check passed with
+`make PYTHON=.venv/bin/python icons`; the plain `make icons` target requires
+the selected Python interpreter to have dependencies from `requirements.txt`.
 
 ### Detailed instructions
 
@@ -127,7 +142,7 @@ page on Azure."
 
 ## Task 3 — Donate UI in the packaged app (Stripe payment link)
 
-- [ ] **Status:** not started
+- [ ] **Status:** in progress
 - **Depends on:** Task 1 (license clarity), Task 2 (optional, for the donate
   icon)
 - **Acceptance criteria:**
@@ -149,6 +164,14 @@ page on Azure."
   - A "Donate" item also appears in the macOS menu bar (under the app menu)
     and a Windows tray-equivalent menu (just the main-window button is fine
     on Windows).
+
+**Progress:** Added `geotagcopy/donate.py`, the header Donate button, a Support
+menu Donate item, macOS `_build_info.py` generation from
+`GEOTAGCOPY_STRIPE_PAYMENT_LINK`, `.gitignore` coverage for generated build
+info, and `tests/test_donate.py`. `make test` passes. Remaining work before
+completion: wire the same build-info generation into `scripts/build_windows.py`
+when Task 4 creates it, pass `vars.STRIPE_PAYMENT_LINK` in the release workflow
+in Task 5, and manually smoke-check the GUI with a real or example Stripe link.
 
 ### Detailed instructions
 
@@ -768,10 +791,13 @@ The agent must collect and surface answers for these before finalizing
 Task 1, Task 5, Task 7, and Task 10:
 
 - [ ] **License choice** for Task 1: MIT, Apache-2.0, or other? Default if
-  unanswered: MIT.
-- [ ] **Copyright holder name** for `LICENSE` and `README.md`.
-- [ ] **Security contact email** for `SECURITY.md`.
-- [ ] **Code of Conduct contact email** for `CODE_OF_CONDUCT.md`.
+  unanswered: MIT. Current implementation assumes MIT; confirm before release.
+- [ ] **Copyright holder name** for `LICENSE` and `README.md`. Current
+  implementation uses `GeoTagCopy contributors`; confirm before release.
+- [ ] **Security contact email** for `SECURITY.md`. Current implementation uses
+  `security@igeotagdonor.example`; replace before release.
+- [ ] **Code of Conduct contact email** for `CODE_OF_CONDUCT.md`. Current
+  implementation uses `conduct@igeotagdonor.example`; replace before release.
 - [ ] **Stripe Payment Link URL** (must be a real
   `https://buy.stripe.com/...` or `https://donate.stripe.com/...` URL).
 - [ ] **Apple Developer Team ID** + the `.p12` Developer ID Application
